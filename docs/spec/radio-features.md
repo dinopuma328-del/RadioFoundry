@@ -26,7 +26,7 @@ quick changes therefore never reads back a value from before its own last change
 | `tot_s` | 180 | the radio's TX time-out, for channels whose own (codeplug) value is 0; 0 = none |
 | `tot_warn_s` | 10 | warning beep this long before the time-out; 0 = none |
 | `bcl` | off | busy channel lockout on FM: off, carrier (anything heard), wrong tone (a carrier without our RX tone) |
-| `roger_beep` | off | FM: a 1200 Hz + 900 Hz tone pair (100 ms each) at the end of each transmission |
+| `roger_beep` | off | FM: a 1200 Hz + 900 Hz tone pair (100 ms each) at the end of each transmission (the default of the end tone, 4.3) |
 | `tx_inhibit` | off | refuse every transmission (`tx_deny=inhibit`) |
 | `scan_resume` | carrier | time (move on after `scan_hold_s` on a signal, or when it ends), carrier (move on `scan_delay_ms` after it ends), stop (the scan ends on the first signal) |
 | `scan_hold_s` | 5 | time mode's hold |
@@ -38,6 +38,8 @@ quick changes therefore never reads back a value from before its own last change
 | `beep_level` | 50 | 0 (silent) to 100: the loudest a beep gets (section 4) |
 | `key_beep` | on | `radio_req_beep(BEEP_KEY)` sounds |
 | `talk_permit` | on | DMR: the talk permit tone when the voice goes on air, or just before on boards with `CAP_BEEP_NOT_ON_AIR` (4) (stored as `SETTINGS_RS_NO_TALK_PERMIT` in `rs_flags`, 0 = on) |
+| `sig_dmr[3]`, `sig_fm[3]` | default | signaling tones (4.3): where the start of transmission, end of transmission and reception end tones sound, in DMR and in FM: default, off, speaker, on air, speaker + air |
+| `sig_snd[3]` | standard | signaling tones: which sound each event plays |
 | `vox` | off | off, on channels whose codeplug entry allows it, on every FM channel (CONFIG_VOX) |
 | `vox_level` | 5 | sensitivity 1 (loud voice needed) to 10 |
 | `vox_tail_ms` | 1500 | stays keyed this long after the voice stops |
@@ -364,6 +366,7 @@ None of them needs a correction in the driver. The HIL test (`test_fm_tx_dtmf`) 
 | TOT warning | 1000 Hz 100 ms twice | 3.2, unless Settings > Sound > TOT warning tone is off (settings area key 0x0004) |
 | battery low | 800 Hz, 600 Hz | entering low, then every 2 min, unless Settings > Sound > Battery tone is off (settings area key 0x0005) |
 | battery critical | 600 Hz three times | entering critical, then every 30 s; the same setting as battery low |
+| custom | up to 5 steps, 600 ms | a signaling tone on the speaker (4.3); not a fixed pattern: it has no entry in the pattern table or the beep reel |
 | scan hold | 1400 Hz 40 ms | the scan stops on a signal, if `scan_beep` (Settings > Sound > Scan stop tone, off by default) |
 | emergency | 1500 / 900 Hz warble, 6 x 160 ms | someone's emergency heard (alarm or emergency call), if the emergency setting's tone is on (Settings > Sound > Emergency tone, `dmr-emergency.md`) |
 | message | 1000, 1300, 1700 Hz rising, 60-90 ms each | a text message arrived: the UI asks for it (`radio_req_beep(BEEP_MESSAGE)`) when Settings > Sound > Message tone is on |
@@ -478,6 +481,45 @@ radio, whose volume screen does the job. The bar asks for the backlight (`ui_app
 the radio. No new view field: `follow_volume` already filters the knob (2 %, the ends). Tests: `uiFlowTest`
 (`volume_bar_checks`, every display class, a seeded property run), `radioCoreTest` (`test_volume_step_of`), gallery
 `volume_bar`, `volume_bar_call`.
+
+### 4.3 Signaling tones (CONFIG_BEEP)
+
+Short tone sequences at three events, on the speaker, on air or both, set separately for DMR and for FM
+(`core/radio/sigtone.h`, Settings > Sound). Each sequence is up to 5 steps of `{Hz, ms}` (`SIG_STEPS`), at most 600 ms in
+all (`SIG_MAX_MS`), a pause being a step of 0 Hz: the shape of the rows of a CPS alert tone page.
+
+| Event | Where it fires | Default (the output setting 0) |
+|---|---|---|
+| start (`SIG_EV_BEGIN`) | DMR: the talk permit's place. FM: when the transmitter keys | DMR: the talk permit (`talk_permit`). FM: none |
+| end (`SIG_EV_END`) | DMR: our transmission is over. FM: PTT released | DMR: none. FM: the roger beep, if `roger_beep` is on |
+| idle (`SIG_EV_IDLE`) | DMR: a call heard ended. FM: the squelch closed after a reception | DMR: the call end beep. FM: none |
+
+Output (`sig_out_t`): *default* leaves the row above as it was and an older settings record reads it, *off* silences
+the event (the talk permit, the call end beep and the roger beep included), *speaker*, *on air* and *speaker + air*
+replace it with the sequence. The idle event has no on air copy, and nor has the FM start event (the transmitter keys
+with the microphone live): `clamp_settings` maps those to what the speaker can do. A channel with "no beep" has none of
+the speaker or on air copies. The tones on the speaker are the `BEEP_CUSTOM` pattern of `beep.c` (`beep_play_custom`:
+two copies of the steps alternate, so a pattern still playing is not rewritten), and a *default* output keeps the fixed
+beeps and their Settings > Sound switches. The sound (`sig_snd_t`) is a preset of `sigtone.c`: standard (the event's
+own beep), chirp, blip, double blip, roger, the five tone call (`0, 1570, 1050, 1570, 1320 Hz, 40 ms each`), an idle
+tone (2000 Hz, 100 ms) and a reset pair (640 Hz 100 ms, 950 Hz 50 ms); the last three read off a CPS alert tone page.
+
+| On air | How |
+|---|---|
+| DMR start | `ambeVoiceTxTone` is asked for as PTT goes down; the encoder sends the sequence in place of the microphone from the transmission's first block, after the headers. The encoder waits for room in its queue (`AMBE_VOICE_QUEUE`, 8 frames) before each block of the tone, so none of it is lost to an overflow |
+| DMR end | asked for as PTT is let go while on air, with the microphone muted after it (`final`). The call stack holds the over open while the source is busy (`dmr_voice_source_t.busy`: the tone not yet pulled), one superframe at a time, at most `DMR_CALL_TX_TAIL_HOLDS` (3, about 1.1 s). A time-out ends the over at once |
+| FM end | `roger_poll` steps through the sequence with `hal_radio_t.tx_tone`, from each step's own start (a step begins at the first poll, `RADIO_POLL_MS`, after its time), then unkeys. The default is the two step roger beep. A board with no `tx_tone` sends none |
+
+The tone is encoded as a tone frame (`VOCODER_OPT_TONE_FRAMES`) with the noise reduction off while it plays, and the
+options are put back after it. AMBE is a speech codec: a steady tone passes, a sequence of steps shorter than about
+60 ms is two or three frames each and may sound rough, and what another make's radio does with a tone frame is not
+specified here. A start tone is sent with the host's audio (USRP) never, and a start tone longer than the encoder queue
+can hold waits for the call stack, which delays the voice that much. The tone counts in the TX time-out.
+
+On the speaker the start tone follows the board: a board with `CAP_BEEP_NOT_ON_AIR` plays a DMR start tone before keying,
+in the talk permit's hold (`permit_before_key`), and plays no FM start tone (it cannot beep while it transmits). The end
+tone plays once the transmitter is off.
+
 
 ## 5. Power
 

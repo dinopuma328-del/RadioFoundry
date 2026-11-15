@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 The RadioFoundry Authors
-// Signaling tones (docs/spec/radio-features.md 4.4): short tone sequences played at the start of a transmission, at
+// Signaling tones (docs/spec/radio-features.md 4.3): short tone sequences played at the start of a transmission, at
 // its end and when a reception ends, on the speaker, on air, or both, separately for DMR and FM. Up to SIG_STEPS
 // {Hz, ms} steps each, the same shape as the five Frequency / Period rows of a CPS alert tone page.
 //

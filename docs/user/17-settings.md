@@ -44,6 +44,9 @@ Some settings are on the menu before the feature behind them exists, or don't ap
 | Battery tone | On, Off | On | The beeps for a low and a critical battery | Works |
 | TX denied tone | On, Off | On | The low tone when the radio refuses PTT or the time-out cuts a transmission | Works |
 | Scan stop tone | On, Off | Off | A short beep when a scan stops on a signal | Works |
+| DMR start tone, DMR end tone, DMR idle tone | Default, Off, Speaker, On air, Speaker + air (idle: no On air) | Default | Where the tone sounds at the start of your DMR transmission, at its end, and when a call you heard ends. Default is the radio's own (the talk permit, nothing, the call end tone). On air sends the tone with your voice, so the other station hears it ([Signaling tones](#signaling-tones)) | Untested on air |
+| FM start tone, FM end tone, FM idle tone | Default, Off, Speaker, On air, Speaker + air (start and idle: no On air) | Default | The same for FM. The FM end tone's default is the roger beep | Untested on air |
+| Start tone sound, End tone sound, Idle tone sound | Standard, Chirp, Blip, Double blip, Roger, Five tone call, Idle 2 kHz, Reset pair | Standard | Which tone each event plays | Works |
 | Emergency tone | On, Off | On | The warble when the radio hears someone's emergency. Dimmed in a build without DMR emergency | Works |
 | Voice prompts | On, Off | Off | Spoken prompts. There is no recorded speech yet | Dimmed |
 | Message tone | On, Off | On | A three-note tone when a text message arrives | Works |
@@ -193,6 +196,33 @@ When the keys lock by themselves and what still works while they are locked ([Ke
 <img src="../ux/screens/160x120i5/about.png" width="200" alt="Settings > Advanced > About">
 
 <img src="../ux/screens/160x120i5/settings_advanced.png" width="200" alt="Settings, Advanced">
+
+## Signaling tones
+
+Settings > Sound has three events, each with its own tone: the **start** of your transmission, its **end**, and the
+**idle** moment when a reception ends and the channel is free again. DMR and FM are set separately. For each you pick
+where the tone sounds and which tone it is.
+
+| Output | The tone sounds |
+|---|---|
+| Default | As before: the talk permit, the call end tone and the FM roger beep, with their own switches |
+| Off | Never, the radio's own tone for that event included |
+| Speaker | On your speaker only |
+| On air | In your transmission, so the other stations hear it. DMR sends it as voice; FM as a tone on the carrier |
+| Speaker + air | Both |
+
+A tone is up to five steps of a frequency and a length, 600 ms in all. The sounds in the list are presets, including
+the five tone call and the idle and reset tones of a common CPS alert tone page; free editing of the steps is not in the
+menu yet.
+
+- The start tone on air goes in front of your voice, which starts a little later. The end tone on air goes after you
+  let go of **PTT**, and the radio stays on the air for it (up to about one second) before it ends the transmission.
+- A channel with **Talk permit beeps** off has none of these tones.
+- The tone is sent as a tone frame of the voice codec. A steady tone passes well; fast sequences may sound rough, and
+  other makes of radio may play them differently. Try it with a second radio before you rely on it.
+- An end tone on air counts in the transmit time-out.
+- On a radio that cannot beep while it transmits, the DMR start tone on the speaker plays just before the radio keys,
+  and there is no FM start tone on the speaker.
 
 ## Factory reset
 

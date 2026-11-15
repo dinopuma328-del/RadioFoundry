@@ -193,6 +193,7 @@ static void beep(radio_sm_t *sm, uint8_t b)
 // --- Signaling tones (sigtone.h, docs/spec/radio-features.md 4.4) ---
 
 _Static_assert(SIG_EV_COUNT == 3, "radio_settings_t.sig_* hold three events");
+_Static_assert(SIG_STEPS == 5, "radio_settings_t.sig_hz / sig_ms hold five steps");
 
 // Where the event's tone goes on this channel's mode (sig_out_t)
 static uint8_t sig_out(const radio_sm_t *sm, sig_event_t ev)
@@ -212,7 +213,7 @@ static void sig_local(radio_sm_t *sm, sig_event_t ev)
 {
 #if CONFIG_BEEP
 	beep_seg_t seg[SIG_STEPS];
-	uint8_t n = sig_steps(sm->set.sig_snd[ev], ev, seg);
+	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	beep_play_custom(seg, n, beep_level_now(sm), beep_shared_now());
 #else
 	(void)sm;
@@ -1923,7 +1924,7 @@ static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 		return;
 	}
 	beep_seg_t seg[SIG_STEPS];
-	uint8_t n = sig_steps(sm->set.sig_snd[ev], ev, seg);
+	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	ambeVoiceTxTone(seg, n, ev == SIG_EV_END);
 }
 
@@ -4054,7 +4055,7 @@ static bool roger_start(radio_sm_t *sm, uint32_t now_ms)
 		g[1] = (beep_seg_t){ RADIO_ROGER_HZ2, RADIO_ROGER_STEP_MS };
 		n = 2;
 	} else if (sig_out_air(out, SIG_EV_END)) {
-		n = sig_steps(sm->set.sig_snd[SIG_EV_END], SIG_EV_END, g);
+		n = sig_chain(sm->set.sig_hz[SIG_EV_END], sm->set.sig_ms[SIG_EV_END], SIG_EV_END, g);
 	} else {
 		return false;
 	}
@@ -4834,8 +4835,13 @@ static void clamp_settings(radio_settings_t *s)
 			// An FM start tone on air isn't sent (the transmitter keys with the mic live): speaker only
 			s->sig_fm[i] = s->sig_fm[i] == SIG_OUT_BOTH ? SIG_OUT_LOCAL : SIG_OUT_OFF;
 		}
-		if (s->sig_snd[i] >= SIG_SND_COUNT) {
-			s->sig_snd[i] = SIG_SND_STANDARD;
+		for (unsigned k = 0; k < SIG_STEPS; k++) {
+			if (s->sig_hz[i][k] > SIG_HZ_MAX) {
+				s->sig_hz[i][k] = SIG_HZ_MAX;
+			}
+			if (s->sig_ms[i][k] > SIG_MAX_MS / SIG_MS_UNIT) {
+				s->sig_ms[i][k] = SIG_MAX_MS / SIG_MS_UNIT;
+			}
 		}
 	}
 	if (s->beep_level > 100) {
@@ -4928,7 +4934,10 @@ static void settings_to_radio(const settings_t *st, radio_settings_t *s)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		s->sig_dmr[i] = st->sig_dmr[i];	// 0 = default, in a record from before them; clamp_settings checks
 		s->sig_fm[i] = st->sig_fm[i];
-		s->sig_snd[i] = st->sig_snd[i];
+		for (unsigned k = 0; k < SIG_STEPS; k++) {
+			s->sig_hz[i][k] = st->sig_hz[i][k];
+			s->sig_ms[i][k] = st->sig_ms[i][k];
+		}
 	}
 	if (st->rs_stored != 1) {
 		return;
@@ -4989,7 +4998,10 @@ static void radio_to_settings(const radio_settings_t *s, uint32_t now_ms)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		st->sig_dmr[i] = s->sig_dmr[i];
 		st->sig_fm[i] = s->sig_fm[i];
-		st->sig_snd[i] = s->sig_snd[i];
+		for (unsigned k = 0; k < SIG_STEPS; k++) {
+			st->sig_hz[i][k] = s->sig_hz[i][k];
+			st->sig_ms[i][k] = s->sig_ms[i][k];
+		}
 	}
 	st->rs_stored = 1;
 	st->roam_rssi_dbm = s->roam_rssi_dbm;

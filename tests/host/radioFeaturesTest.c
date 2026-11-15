@@ -3460,6 +3460,20 @@ static void test_tone_keys(void)
 
 static void set_no_permit(radio_settings_t *s) { s->talk_permit = false; }
 
+// A chain (sigtone.h) into an event's settings: n steps of hz[] and ms[], the rest ends it
+static void sig_chain_put(radio_settings_t *s, sig_event_t ev, const uint16_t *hz, const uint16_t *ms, int n)
+{
+	for (int k = 0; k < 5; k++) {
+		s->sig_hz[ev][k] = k < n ? hz[k] : 0;
+		s->sig_ms[ev][k] = k < n ? (uint8_t)(ms[k] / SIG_MS_UNIT) : 0;
+	}
+}
+static const uint16_t c5_hz[] = { 0, 1570, 1050, 1570, 1320 }, c5_ms[] = { 40, 40, 40, 40, 40 };	// a CPS call tone
+static const uint16_t blip_hz[] = { 1500 }, blip_ms[] = { 60 };
+static const uint16_t chirp_hz[] = { 1000, 1400, 1800 }, chirp_ms[] = { 40, 40, 40 };
+static const uint16_t roger_hz[] = { 1200, 900 }, roger_ms[] = { 100, 100 };
+static const uint16_t idle_hz[] = { 2000 }, idle_ms[] = { 100 };
+
 // A board whose beeps can't sound on air (CAP_BEEP_NOT_ON_AIR): the short talk permit plays in a hold before keying,
 // while the radio still receives, and none plays once on air. With the permit off it keys at once
 // Signaling tones on an FM channel (sigtone.h): the end of transmission tone on air as a sequence (replacing the roger
@@ -3468,7 +3482,7 @@ static void set_no_permit(radio_settings_t *s) { s->talk_permit = false; }
 static void set_sig_end_air_call5(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_END] = SIG_OUT_AIR;
-	s->sig_snd[SIG_EV_END] = SIG_SND_CALL5;
+	sig_chain_put(s, SIG_EV_END, c5_hz, c5_ms, 5);
 }
 static void set_sig_end_off_roger(radio_settings_t *s)
 {
@@ -3479,12 +3493,12 @@ static void set_sig_end_local(radio_settings_t *s)
 {
 	s->roger_beep = true;
 	s->sig_fm[SIG_EV_END] = SIG_OUT_LOCAL;
-	s->sig_snd[SIG_EV_END] = SIG_SND_BLIP;
+	sig_chain_put(s, SIG_EV_END, blip_hz, blip_ms, 1);
 }
 static void set_sig_end_both_roger(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_END] = SIG_OUT_BOTH;
-	s->sig_snd[SIG_EV_END] = SIG_SND_ROGER;
+	sig_chain_put(s, SIG_EV_END, roger_hz, roger_ms, 2);
 }
 static void set_sig_begin_local(radio_settings_t *s)
 {
@@ -3493,7 +3507,7 @@ static void set_sig_begin_local(radio_settings_t *s)
 static void set_sig_idle_local(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_IDLE] = SIG_OUT_LOCAL;
-	s->sig_snd[SIG_EV_IDLE] = SIG_SND_IDLE1;
+	sig_chain_put(s, SIG_EV_IDLE, idle_hz, idle_ms, 1);
 }
 
 static void test_sig_fm(void)
@@ -3641,7 +3655,7 @@ static void set_sig_dmr_begin_off(radio_settings_t *s) { s->sig_dmr[SIG_EV_BEGIN
 static void set_sig_dmr_begin_local(radio_settings_t *s)
 {
 	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_LOCAL;
-	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_CHIRP;
+	sig_chain_put(s, SIG_EV_BEGIN, chirp_hz, chirp_ms, 3);
 }
 static void set_sig_dmr_begin_air(radio_settings_t *s) { s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_AIR; }
 static void set_sig_dmr_end_local(radio_settings_t *s) { s->sig_dmr[SIG_EV_END] = SIG_OUT_LOCAL; }
@@ -3649,7 +3663,7 @@ static void set_sig_dmr_idle_off(radio_settings_t *s) { s->sig_dmr[SIG_EV_IDLE] 
 static void set_sig_dmr_idle_local(radio_settings_t *s)
 {
 	s->sig_dmr[SIG_EV_IDLE] = SIG_OUT_LOCAL;
-	s->sig_snd[SIG_EV_IDLE] = SIG_SND_IDLE1;
+	sig_chain_put(s, SIG_EV_IDLE, idle_hz, idle_ms, 1);
 }
 
 // PTT on and off on the DMR channel: the beeps played from the press to the end of the transmission
@@ -3743,19 +3757,19 @@ static void test_sig_dmr(void)
 static void set_sig_dmr_begin_air_blip(radio_settings_t *s)
 {
 	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_AIR;
-	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_BLIP;
+	sig_chain_put(s, SIG_EV_BEGIN, blip_hz, blip_ms, 1);
 }
 static void set_sig_dmr_end_air_chirp(radio_settings_t *s)
 {
 	s->sig_dmr[SIG_EV_END] = SIG_OUT_AIR;
-	s->sig_snd[SIG_EV_END] = SIG_SND_CHIRP;
+	sig_chain_put(s, SIG_EV_END, chirp_hz, chirp_ms, 3);
 }
 static void set_sig_dmr_both_air(radio_settings_t *s)
 {
 	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_BOTH;
-	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_BLIP;
+	sig_chain_put(s, SIG_EV_BEGIN, blip_hz, blip_ms, 1);
 	s->sig_dmr[SIG_EV_END] = SIG_OUT_BOTH;
-	s->sig_snd[SIG_EV_END] = SIG_SND_CHIRP;
+	sig_chain_put(s, SIG_EV_END, chirp_hz, chirp_ms, 3);
 }
 
 static void test_sig_dmr_air(void)

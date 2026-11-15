@@ -3964,30 +3964,41 @@ static void test_ui_glue(void)
 	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
 		CHECK(ui_svc_setting_get((uint8_t)(UI_SET_SIG_DMR + ev)) == SIG_OUT_DEFAULT &&
 		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_FM + ev)) == SIG_OUT_DEFAULT &&
-		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_SND + ev)) == SIG_SND_STANDARD);
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_HZ + 5 * ev)) == 0 &&
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_MS + 5 * ev)) == 0);
 	}
 	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_BEGIN, SIG_OUT_BOTH);
 	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_AIR);	// nothing to send when a reception ends
 	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_END, SIG_OUT_AIR);
 	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_BEGIN, SIG_OUT_BOTH);	// FM's start tone is the speaker's only
-	ui_svc_apply(UI_SET_SIG_SND + SIG_EV_END, SIG_SND_CALL5);
-	ui_svc_apply(UI_SET_SIG_SND + SIG_EV_IDLE, 200);		// not a sound: the standard one
+	// The end chain's second step (1570 Hz, 40 ms) and its third (a length of 5000 ms, a frequency of 9000 Hz: both cut)
+	ui_svc_apply(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1, 1570);
+	ui_svc_apply(UI_SET_SIG_MS + 5 * SIG_EV_END + 1, 40);
+	ui_svc_apply(UI_SET_SIG_HZ + 5 * SIG_EV_END + 2, 9000);
+	ui_svc_apply(UI_SET_SIG_MS + 5 * SIG_EV_END + 2, 5000);
 	run(20);
 	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT &&
 	      sm.set.sig_fm[SIG_EV_END] == SIG_OUT_AIR && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_LOCAL &&
-	      sm.set.sig_snd[SIG_EV_END] == SIG_SND_CALL5 && sm.set.sig_snd[SIG_EV_IDLE] == SIG_SND_STANDARD);
+	      sm.set.sig_hz[SIG_EV_END][1] == 1570 && sm.set.sig_ms[SIG_EV_END][1] == 4 &&
+	      sm.set.sig_hz[SIG_EV_END][2] == SIG_HZ_MAX && sm.set.sig_ms[SIG_EV_END][2] == SIG_MAX_MS / SIG_MS_UNIT &&
+	      sm.set.sig_ms[SIG_EV_IDLE][0] == 0);
 	CHECK(ui_svc_setting_get(UI_SET_SIG_DMR + SIG_EV_BEGIN) == SIG_OUT_BOTH &&
-	      ui_svc_setting_get(UI_SET_SIG_SND + SIG_EV_END) == SIG_SND_CALL5);
+	      ui_svc_setting_get(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1) == 1570 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 1) == 40 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 2) == (int32_t)SIG_MAX_MS);
 	settings_read(&sv);
 	CHECK(sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sv.sig_fm[SIG_EV_END] == SIG_OUT_AIR &&
-	      sv.sig_snd[SIG_EV_END] == SIG_SND_CALL5 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
+	      sv.sig_hz[SIG_EV_END][1] == 1570 && sv.sig_ms[SIG_EV_END][1] == 4 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
 	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
 		ui_svc_apply((uint8_t)(UI_SET_SIG_DMR + ev), SIG_OUT_DEFAULT);
 		ui_svc_apply((uint8_t)(UI_SET_SIG_FM + ev), SIG_OUT_DEFAULT);
-		ui_svc_apply((uint8_t)(UI_SET_SIG_SND + ev), SIG_SND_STANDARD);
+	}
+	for (int k = 0; k < 15; k++) {
+		ui_svc_apply((uint8_t)(UI_SET_SIG_HZ + k), 0);
+		ui_svc_apply((uint8_t)(UI_SET_SIG_MS + k), 0);
 	}
 	run(20);
-	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_DEFAULT && sm.set.sig_snd[SIG_EV_END] == SIG_SND_STANDARD);
+	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_DEFAULT && sm.set.sig_ms[SIG_EV_END][1] == 0);
 	// Settings > Sound tones. The four keyed ones (docs/spec/codeplug-settings.md 5.2): on while absent; a set writes
 	// a one-byte bool key with no codeplug reload, and the radio core saves the tone as the radio's own
 	static const uint8_t tone_ids[] = { UI_SET_CALL_END_TONE, UI_SET_TOT_WARN_TONE, UI_SET_BATTERY_TONE,
@@ -5132,7 +5143,7 @@ static void test_factory_reset(void)
 	CHECK(settings_flush());
 	n_ev = 0;
 	CHECK(ui_svc_factory_reset());
-	sim_flash_cut_after(444);	// the settings records (page 1: 176 + 4 bytes, page 0: 252 + 4) go in, the native erase fails
+	sim_flash_cut_after(488);	// the settings records (page 1: 212 + 4 bytes, page 0: 252 + 4, rounded up as the sizes are) go in, the native erase fails
 	storage_job_poll();
 	sim_flash_power_on();
 	CHECK(n_ev == 1 && strstr(last_ev.text, "native") != NULL);

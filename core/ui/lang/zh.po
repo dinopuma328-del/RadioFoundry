@@ -2830,38 +2830,6 @@ msgstr ""
 msgid "Speaker + air"
 msgstr ""
 
-#: core/ui/ui_menus.c
-msgid "Standard"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Chirp"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Blip"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Double blip"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Roger"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Five tone call"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 kHz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Reset pair"
-msgstr ""
-
 #: core/ui/ui_menus.c core/ui/ui_screens.c
 msgid "Volume"
 msgstr "音量"
@@ -2939,15 +2907,123 @@ msgid "FM idle tone"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "Start tone sound"
+msgid "Start 1 Hz"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "End tone sound"
+msgid "Start 1 ms"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "Idle tone sound"
+msgid "Start 2 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 2 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 3 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 3 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 4 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 4 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 5 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start 5 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 1 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 1 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 2 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 2 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 3 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 3 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 4 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 4 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 5 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End 5 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 1 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 1 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 3 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 3 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 4 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 4 ms"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 5 Hz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 5 ms"
 msgstr ""
 
 #: core/ui/ui_menus.c
@@ -3213,6 +3289,14 @@ msgstr "按键"
 #: core/ui/ui_menus.c
 msgid "My radio"
 msgstr "我的电台"
+
+#: core/ui/ui_menus.c
+msgid "Signaling tones"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Signaling Tones"
+msgstr ""
 
 #: core/ui/ui_menus.c
 msgid "Advanced"

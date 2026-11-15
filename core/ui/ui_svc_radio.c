@@ -433,8 +433,11 @@ void ui_svc_apply(uint8_t id, int32_t value)
 	case UI_SET_SIG_FM ... UI_SET_SIG_FM_LAST:
 		rs.sig_fm[id - UI_SET_SIG_FM] = (uint8_t)(v16 > 255 ? 255 : v16);
 		break;
-	case UI_SET_SIG_SND ... UI_SET_SIG_SND_LAST:
-		rs.sig_snd[id - UI_SET_SIG_SND] = (uint8_t)(v16 > 255 ? 255 : v16);
+	case UI_SET_SIG_HZ ... UI_SET_SIG_HZ_LAST:
+		rs.sig_hz[(id - UI_SET_SIG_HZ) / 5][(id - UI_SET_SIG_HZ) % 5] = v16;
+		break;
+	case UI_SET_SIG_MS ... UI_SET_SIG_MS_LAST:
+		rs.sig_ms[(id - UI_SET_SIG_MS) / 5][(id - UI_SET_SIG_MS) % 5] = (uint8_t)(v16 / 10u > 255u ? 255u : v16 / 10u);
 		break;
 	case UI_SET_VFO_STEP:		// 10 Hz units; 833 is the exact 8.33 kHz grid
 		radio_req_vfo_step_size(value == 833 ? 8333u : value > 0 && value <= 100000 ? (uint32_t)value * 10u : 0u);

@@ -39,7 +39,7 @@ quick changes therefore never reads back a value from before its own last change
 | `key_beep` | on | `radio_req_beep(BEEP_KEY)` sounds |
 | `talk_permit` | on | DMR: the talk permit tone when the voice goes on air, or just before on boards with `CAP_BEEP_NOT_ON_AIR` (4) (stored as `SETTINGS_RS_NO_TALK_PERMIT` in `rs_flags`, 0 = on) |
 | `sig_dmr[3]`, `sig_fm[3]` | default | signaling tones (4.3): where the start of transmission, end of transmission and reception end tones sound, in DMR and in FM: default, off, speaker, on air, speaker + air |
-| `sig_snd[3]` | standard | signaling tones: which sound each event plays |
+| `sig_hz[3][5]`, `sig_ms[3][5]` | none | signaling tones: each event's chain of five steps, a frequency in Hz and a length in 10 ms (a step of length 0 ends the chain; no step = the event's standard sound) |
 | `vox` | off | off, on channels whose codeplug entry allows it, on every FM channel (CONFIG_VOX) |
 | `vox_level` | 5 | sensitivity 1 (loud voice needed) to 10 |
 | `vox_tail_ms` | 1500 | stays keyed this long after the voice stops |
@@ -500,9 +500,11 @@ replace it with the sequence. The idle event has no on air copy, and nor has the
 with the microphone live): `clamp_settings` maps those to what the speaker can do. A channel with "no beep" has none of
 the speaker or on air copies. The tones on the speaker are the `BEEP_CUSTOM` pattern of `beep.c` (`beep_play_custom`:
 two copies of the steps alternate, so a pattern still playing is not rewritten), and a *default* output keeps the fixed
-beeps and their Settings > Sound switches. The sound (`sig_snd_t`) is a preset of `sigtone.c`: standard (the event's
-own beep), chirp, blip, double blip, roger, the five tone call (`0, 1570, 1050, 1570, 1320 Hz, 40 ms each`), an idle
-tone (2000 Hz, 100 ms) and a reset pair (640 Hz 100 ms, 950 Hz 50 ms); the last three read off a CPS alert tone page.
+beeps and their Settings > Sound switches. The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (5) steps, each a frequency (0 = a pause, up to
+`SIG_HZ_MAX`, 3400 Hz) and a length (multiples of 10 ms), the same shape as the Frequency / Period rows of a CPS alert
+tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG_MAX_MS` (600 ms). A chain with no step
+is the event's standard sound (the permit beep at the start, the call end beep otherwise). Settings > Signaling tones
+edits the three chains in `settings_t`: nothing is built in beyond that standard sound.
 
 | On air | How |
 |---|---|

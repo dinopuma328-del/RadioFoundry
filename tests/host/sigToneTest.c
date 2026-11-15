@@ -23,34 +23,53 @@ static void test_out(void)
 	CHECK(sig_out_clean(200, SIG_EV_BEGIN) == SIG_OUT_DEFAULT && sig_out_clean(SIG_OUT_COUNT, SIG_EV_END) == SIG_OUT_DEFAULT);
 }
 
-static void test_presets(void)
+static void test_chain(void)
 {
 	beep_seg_t s[SIG_STEPS];
-	for (int snd = 0; snd < SIG_SND_COUNT + 2; snd++) {
-		for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
-			uint8_t n = sig_steps((uint8_t)snd, (sig_event_t)ev, s);
-			CHECK(n >= 1 && n <= SIG_STEPS && sig_total_ms(s, n) <= SIG_MAX_MS && sig_total_ms(s, n) != 0);
-			for (uint8_t i = 0; i < n; i++) {
-				CHECK(s[i].hz != BEEP_HZ_SWEEP && s[i].hz < 4000);
-			}
-		}
-	}
-	// the standard sound follows the event: the permit pitch at the start, the call end's otherwise
-	uint8_t n = sig_steps(SIG_SND_STANDARD, SIG_EV_BEGIN, s);
-	CHECK(n == 3 && s[0].hz == 1600 && s[2].hz == 1600);
-	n = sig_steps(SIG_SND_STANDARD, SIG_EV_END, s);
+	uint16_t hz[SIG_STEPS] = { 0 };
+	uint8_t ms[SIG_STEPS] = { 0 };
+
+	// no step: the event's standard sound, whatever the frequencies say
+	CHECK(!sig_chain_set(ms));
+	hz[0] = 1234;
+	uint8_t n = sig_chain(hz, ms, SIG_EV_BEGIN, s);
+	CHECK(n == 3 && s[0].hz == 1600 && s[1].hz == 0 && s[2].hz == 1600);
+	n = sig_chain(hz, ms, SIG_EV_END, s);
 	CHECK(n == 3 && s[0].hz == 1200 && s[2].hz == 900);
-	// the presets read off an alert tone page: the call tone's five steps, the idle tone, the reset tone
-	n = sig_steps(SIG_SND_CALL5, SIG_EV_BEGIN, s);
-	CHECK(n == 5 && s[0].hz == 0 && s[1].hz == 1570 && s[2].hz == 1050 && s[3].hz == 1570 && s[4].hz == 1320 &&
-	      s[0].ms == 40 && s[4].ms == 40);
-	n = sig_steps(SIG_SND_IDLE1, SIG_EV_IDLE, s);
-	CHECK(n == 1 && s[0].hz == 2000 && s[0].ms == 100);
-	n = sig_steps(SIG_SND_RESET2, SIG_EV_END, s);
+	n = sig_chain(hz, ms, SIG_EV_IDLE, s);
+	CHECK(n == 3 && s[0].hz == 1200);
+
+	// a CPS call tone: a pause, then four tones of 40 ms
+	static const uint16_t c5h[SIG_STEPS] = { 0, 1570, 1050, 1570, 1320 };
+	static const uint8_t c5m[SIG_STEPS] = { 4, 4, 4, 4, 4 };
+	CHECK(sig_chain_set(c5m));
+	n = sig_chain(c5h, c5m, SIG_EV_BEGIN, s);
+	CHECK(n == 5 && s[0].hz == 0 && s[1].hz == 1570 && s[2].hz == 1050 && s[3].hz == 1570 && s[4].hz == 1320);
+	CHECK(s[0].ms == 40 && s[4].ms == 40 && sig_total_ms(s, n) == 200);
+
+	// a step of length 0 ends the chain: what follows it is ignored
+	static const uint16_t eh[SIG_STEPS] = { 640, 950, 2000, 0, 0 };
+	static const uint8_t em[SIG_STEPS] = { 10, 5, 0, 7, 7 };
+	n = sig_chain(eh, em, SIG_EV_END, s);
 	CHECK(n == 2 && s[0].hz == 640 && s[0].ms == 100 && s[1].hz == 950 && s[1].ms == 50);
-	// the roger preset is the FM roger beep
-	n = sig_steps(SIG_SND_ROGER, SIG_EV_END, s);
-	CHECK(n == 2 && s[0].hz == 1200 && s[0].ms == 100 && s[1].hz == 900 && s[1].ms == 100);
+
+	// a first step of length 0 is no chain at all, even with later steps
+	static const uint8_t zm[SIG_STEPS] = { 0, 9, 9, 9, 9 };
+	CHECK(!sig_chain_set(zm));
+	n = sig_chain(eh, zm, SIG_EV_END, s);
+	CHECK(n == 3 && s[0].hz == 1200);
+
+	// a frequency above the band is cut, and so is the total length (5 x 255 x 10 ms would be 12.7 s)
+	static const uint16_t bh[SIG_STEPS] = { 9000, 1000, 1000, 1000, 1000 };
+	static const uint8_t bm[SIG_STEPS] = { 255, 255, 255, 255, 255 };
+	n = sig_chain(bh, bm, SIG_EV_END, s);
+	CHECK(n == 1 && s[0].hz == SIG_HZ_MAX && sig_total_ms(s, n) == SIG_MAX_MS);
+	static const uint8_t cm[SIG_STEPS] = { 30, 30, 30, 30, 30 };	// 300 ms each: the second fills the 600 ms
+	n = sig_chain(bh, cm, SIG_EV_END, s);
+	CHECK(n == 2 && s[0].ms == 300 && s[1].ms == 300 && sig_total_ms(s, n) == SIG_MAX_MS);
+	static const uint8_t dm[SIG_STEPS] = { 40, 30, 20, 10, 10 };	// 400, then 200 of the next 300
+	n = sig_chain(bh, dm, SIG_EV_END, s);
+	CHECK(n == 2 && s[0].ms == 400 && s[1].ms == 200);
 }
 
 // Zero crossings of a block: about 2 * hz * seconds
@@ -120,7 +139,7 @@ static void test_gen(void)
 int main(void)
 {
 	test_out();
-	test_presets();
+	test_chain();
 	test_gen();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures != 0;

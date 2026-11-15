@@ -28,14 +28,6 @@ uint8_t sig_out_clean(uint8_t out, sig_event_t ev)
 // Pitches follow the beeps' (beep.c): a sequence reads as the same family of sounds
 static const beep_seg_t s_permit[] = { { 1600, 50 }, { 0, 40 }, { 1600, 50 } };
 static const beep_seg_t s_end[] = { { 1200, 50 }, { 0, 30 }, { 900, 70 } };
-static const beep_seg_t s_chirp[] = { { 1000, 40 }, { 1400, 40 }, { 1800, 40 } };
-static const beep_seg_t s_blip[] = { { 1500, 60 } };
-static const beep_seg_t s_double[] = { { 1500, 40 }, { 0, 40 }, { 1500, 40 } };
-static const beep_seg_t s_roger[] = { { 1200, 100 }, { 900, 100 } };
-// Five steps of 40 ms, the first silent: a call tone as a CPS alert tone page can hold
-static const beep_seg_t s_call5[] = { { 0, 40 }, { 1570, 40 }, { 1050, 40 }, { 1570, 40 }, { 1320, 40 } };
-static const beep_seg_t s_idle1[] = { { 2000, 100 } };
-static const beep_seg_t s_reset2[] = { { 640, 100 }, { 950, 50 } };
 
 uint32_t sig_total_ms(const beep_seg_t *s, uint8_t n)
 {
@@ -46,44 +38,29 @@ uint32_t sig_total_ms(const beep_seg_t *s, uint8_t n)
 	return t;
 }
 
-uint8_t sig_steps(uint8_t snd, sig_event_t ev, beep_seg_t out[SIG_STEPS])
+bool sig_chain_set(const uint8_t ms10[SIG_STEPS])
 {
-	const beep_seg_t *src;
-	uint8_t n;
-#define USE(a)	do { src = a; n = sizeof(a) / sizeof(a[0]); } while (0)
-	switch (snd) {
-	case SIG_SND_CHIRP: USE(s_chirp); break;
-	case SIG_SND_BLIP: USE(s_blip); break;
-	case SIG_SND_DOUBLE: USE(s_double); break;
-	case SIG_SND_ROGER: USE(s_roger); break;
-	case SIG_SND_CALL5: USE(s_call5); break;
-	case SIG_SND_IDLE1: USE(s_idle1); break;
-	case SIG_SND_RESET2: USE(s_reset2); break;
-	default:
-		if (ev == SIG_EV_BEGIN) {
-			USE(s_permit);
-		} else {
-			USE(s_end);
-		}
-		break;
-	}
-#undef USE
-	if (n > SIG_STEPS) {
-		n = SIG_STEPS;
-	}
+	return ms10[0] != 0;
+}
+
+uint8_t sig_chain(const uint16_t hz[SIG_STEPS], const uint8_t ms10[SIG_STEPS], sig_event_t ev,
+		  beep_seg_t out[SIG_STEPS])
+{
 	uint32_t left = SIG_MAX_MS;
 	uint8_t m = 0;
-	for (uint8_t i = 0; i < n && left != 0; i++) {
-		out[m] = src[i];
-		if (out[m].hz == BEEP_HZ_SWEEP) {
-			out[m].hz = 0;		// a step is a tone or a pause: BEEP_HZ_SWEEP is beep.c's
-		}
-		if (out[m].ms > left) {
-			out[m].ms = (uint16_t)left;
-		}
+	for (uint8_t i = 0; i < SIG_STEPS && ms10[i] != 0 && left != 0; i++) {
+		uint32_t ms = (uint32_t)ms10[i] * SIG_MS_UNIT;
+		out[m].hz = hz[i] > SIG_HZ_MAX ? SIG_HZ_MAX : hz[i];
+		out[m].ms = (uint16_t)(ms > left ? left : ms);
 		left -= out[m].ms;
 		m++;
 	}
+	if (m != 0) {
+		return m;
+	}
+	const beep_seg_t *src = ev == SIG_EV_BEGIN ? s_permit : s_end;
+	m = ev == SIG_EV_BEGIN ? sizeof(s_permit) / sizeof(s_permit[0]) : sizeof(s_end) / sizeof(s_end[0]);
+	memcpy(out, src, m * sizeof(beep_seg_t));
 	return m;
 }
 

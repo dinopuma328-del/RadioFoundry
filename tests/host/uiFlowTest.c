@@ -533,6 +533,13 @@ static const flow_t flows[] = {
 	{ "S mic AGC on", "", "ok 7 3 down down down down down ok", "set71=1 shows=AGC", 9, false },
 	{ "S mic gain while AGC is on", "ok 7 3 down down down down down ok", "up ok", "toast=Mic_AGC_sets set13=5", 2, false },
 	{ "S message tone", "", "msg:9991234,Hi", "beep=2", 0, false },
+	// Settings > Signaling tones (the group before Advanced): the chain rows type a value. Start 1 Hz is set100 and
+	// Start 1 ms set115; a value off the 10 steps or past the range is refused with what fits
+	{ "S signaling tones group opens", "", "ok 7 up up ok", "screen=group shows=DMR_start_tone", 5, false },
+	{ "S signaling tones: a frequency typed", "ok 7 up up ok down down down down down down", "ok 1 5 7 0 ok", "set100=1570", 8, false },
+	{ "S signaling tones: a length typed", "ok 7 up up ok down down down down down down down", "ok 4 0 ok", "set115=40", 8, false },
+	{ "S signaling tones: a length off the steps is refused", "ok 7 up up ok down down down down down down down down down",
+	  "ok 4 5 ok", "set116=0 toast=Not_changed", 8, false },
 	// The own DMR ID (Settings > My radio, set76, the codeplug's): digits type it, OK saves, BACK takes the last digit
 	// back and with none typed leaves it; 0 is refused
 	{ "S DMR ID opens", "", "ok 7 0 ok", "screen=dmr-id shows=DMR_ID", 4, false },
@@ -1070,7 +1077,7 @@ static const flow_t flows_f[] = {
 	  "writes=1 toast=Saved_channel_3", 1, true },
 #endif
 	// No programmable keys: the Keys group ends at its three general rows (ui.md 3.1)
-	{ "F no key rows without keys", "ok up ok up up up up ok", "down down down", "focus=Long hides=Key_1", 3, false },
+	{ "F no key rows without keys", "ok up ok up up up up up ok", "down down down", "focus=Long hides=Key_1", 3, false },
 #if CONFIG_ZONE_EDIT
 	// No CONTEXT: long OK opens a zone's list in Zones and Channel actions in the list (information-architecture 7.5)
 	{ "F 23 move the channel in use down", "", "ok down down down down ok long:ok long:ok down ok",

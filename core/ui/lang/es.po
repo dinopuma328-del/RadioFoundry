@@ -2828,38 +2828,6 @@ msgstr "En el aire"
 msgid "Speaker + air"
 msgstr "Altavoz + aire"
 
-#: core/ui/ui_menus.c
-msgid "Standard"
-msgstr "Estándar"
-
-#: core/ui/ui_menus.c
-msgid "Chirp"
-msgstr "Gorjeo"
-
-#: core/ui/ui_menus.c
-msgid "Blip"
-msgstr "Bip"
-
-#: core/ui/ui_menus.c
-msgid "Double blip"
-msgstr "Doble bip"
-
-#: core/ui/ui_menus.c
-msgid "Roger"
-msgstr "Roger"
-
-#: core/ui/ui_menus.c
-msgid "Five tone call"
-msgstr "Llamada de 5 tonos"
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 kHz"
-msgstr "Libre 2 kHz"
-
-#: core/ui/ui_menus.c
-msgid "Reset pair"
-msgstr "Par de reinicio"
-
 #: core/ui/ui_menus.c core/ui/ui_screens.c
 msgid "Volume"
 msgstr "Volumen"
@@ -2937,16 +2905,124 @@ msgid "FM idle tone"
 msgstr "Tono de canal libre FM"
 
 #: core/ui/ui_menus.c
-msgid "Start tone sound"
+msgid "Start 1 Hz"
+msgstr "Inicio 1 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Start 1 ms"
 msgstr "Sonido tono inicio"
 
 #: core/ui/ui_menus.c
-msgid "End tone sound"
-msgstr "Sonido tono fin"
+msgid "Start 2 Hz"
+msgstr "Inicio 2 Hz"
 
 #: core/ui/ui_menus.c
-msgid "Idle tone sound"
-msgstr "Sonido tono de libre"
+msgid "Start 2 ms"
+msgstr "Inicio 2 ms"
+
+#: core/ui/ui_menus.c
+msgid "Start 3 Hz"
+msgstr "Inicio 3 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Start 3 ms"
+msgstr "Inicio 3 ms"
+
+#: core/ui/ui_menus.c
+msgid "Start 4 Hz"
+msgstr "Inicio 4 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Start 4 ms"
+msgstr "Inicio 4 ms"
+
+#: core/ui/ui_menus.c
+msgid "Start 5 Hz"
+msgstr "Inicio 5 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Start 5 ms"
+msgstr "Inicio 5 ms"
+
+#: core/ui/ui_menus.c
+msgid "End 1 Hz"
+msgstr "Fin 1 Hz"
+
+#: core/ui/ui_menus.c
+msgid "End 1 ms"
+msgstr "Fin 1 ms"
+
+#: core/ui/ui_menus.c
+msgid "End 2 Hz"
+msgstr "Libre 2 kHz"
+
+#: core/ui/ui_menus.c
+msgid "End 2 ms"
+msgstr "Fin 2 ms"
+
+#: core/ui/ui_menus.c
+msgid "End 3 Hz"
+msgstr "Fin 3 Hz"
+
+#: core/ui/ui_menus.c
+msgid "End 3 ms"
+msgstr "Fin 3 ms"
+
+#: core/ui/ui_menus.c
+msgid "End 4 Hz"
+msgstr "Fin 4 Hz"
+
+#: core/ui/ui_menus.c
+msgid "End 4 ms"
+msgstr "Fin 4 ms"
+
+#: core/ui/ui_menus.c
+msgid "End 5 Hz"
+msgstr "Fin 5 Hz"
+
+#: core/ui/ui_menus.c
+msgid "End 5 ms"
+msgstr "Fin 5 ms"
+
+#: core/ui/ui_menus.c
+msgid "Idle 1 Hz"
+msgstr "Libre 1 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Idle 1 ms"
+msgstr "Libre 1 ms"
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 Hz"
+msgstr "Libre 2 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 ms"
+msgstr "Libre 2 ms"
+
+#: core/ui/ui_menus.c
+msgid "Idle 3 Hz"
+msgstr "Libre 3 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Idle 3 ms"
+msgstr "Libre 3 ms"
+
+#: core/ui/ui_menus.c
+msgid "Idle 4 Hz"
+msgstr "Libre 4 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Idle 4 ms"
+msgstr "Libre 4 ms"
+
+#: core/ui/ui_menus.c
+msgid "Idle 5 Hz"
+msgstr "Libre 5 Hz"
+
+#: core/ui/ui_menus.c
+msgid "Idle 5 ms"
+msgstr "Libre 5 ms"
 
 #: core/ui/ui_menus.c
 msgid "Brightness"
@@ -3211,6 +3287,14 @@ msgstr "Teclas"
 #: core/ui/ui_menus.c
 msgid "My radio"
 msgstr "Mi radio"
+
+#: core/ui/ui_menus.c
+msgid "Signaling tones"
+msgstr "Tonos de señalización"
+
+#: core/ui/ui_menus.c
+msgid "Signaling Tones"
+msgstr "Tonos de Señalización"
 
 #: core/ui/ui_menus.c
 msgid "Advanced"

@@ -287,9 +287,12 @@ int32_t ui_svc_setting_get(uint8_t id)
 	case UI_SET_SIG_FM ... UI_SET_SIG_FM_LAST:
 		radio_get_settings(&rs);
 		return rs.sig_fm[id - UI_SET_SIG_FM];
-	case UI_SET_SIG_SND ... UI_SET_SIG_SND_LAST:
+	case UI_SET_SIG_HZ ... UI_SET_SIG_HZ_LAST:
 		radio_get_settings(&rs);
-		return rs.sig_snd[id - UI_SET_SIG_SND];
+		return rs.sig_hz[(id - UI_SET_SIG_HZ) / 5][(id - UI_SET_SIG_HZ) % 5];
+	case UI_SET_SIG_MS ... UI_SET_SIG_MS_LAST:
+		radio_get_settings(&rs);
+		return (int32_t)rs.sig_ms[(id - UI_SET_SIG_MS) / 5][(id - UI_SET_SIG_MS) % 5] * 10;
 	case UI_SET_CALL_END_TONE:
 	case UI_SET_TOT_WARN_TONE:
 	case UI_SET_BATTERY_TONE:
@@ -420,7 +423,8 @@ bool ui_svc_setting_set(uint8_t id, int32_t value)
 	case UI_SET_SCAN_TONE:
 	case UI_SET_SIG_DMR ... UI_SET_SIG_DMR_LAST:
 	case UI_SET_SIG_FM ... UI_SET_SIG_FM_LAST:
-	case UI_SET_SIG_SND ... UI_SET_SIG_SND_LAST:
+	case UI_SET_SIG_HZ ... UI_SET_SIG_HZ_LAST:
+	case UI_SET_SIG_MS ... UI_SET_SIG_MS_LAST:
 #if CONFIG_SFR
 	case UI_SET_SFR_RX:
 #endif

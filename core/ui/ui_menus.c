@@ -5666,17 +5666,12 @@ static const char *const n_sfrcwid[] = { TRN("Off"), TRN("5 min"), TRN("10 min")
 static const int16_t v_ptype[] = { 0, 1, 2 };	// dmrPrivacyType_t
 static const char *const n_ptype[] = { TRN("Off"), "Motorola", "Anytone" };
 
-// Signaling tones (core/radio/sigtone.h): where each sounds (sig_out_t) and which sound (sig_snd_t). The reception's
-// end and FM's start have no on air copy: nothing is sent then
+// Signaling tones (core/radio/sigtone.h): where each sounds (sig_out_t). The reception's end and FM's start have no on
+// air copy: nothing is sent then
 static const int16_t v_sigout[] = { 0, 1, 2, 3, 4 };
 static const char *const n_sigout[] = { TRN("Default"), TRN("Off"), TRN("Speaker"), TRN("On air"), TRN("Speaker + air") };
 static const int16_t v_sigout_local[] = { 0, 1, 2 };
 static const char *const n_sigout_local[] = { TRN("Default"), TRN("Off"), TRN("Speaker") };
-static const int16_t v_sigsnd[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-static const char *const n_sigsnd[] = {
-	TRN("Standard"), TRN("Chirp"), TRN("Blip"), TRN("Double blip"), TRN("Roger"), TRN("Five tone call"),
-	TRN("Idle 2 kHz"), TRN("Reset pair"),
-};
 
 #define TOGGLE(nm, syn_, sid) { nm, syn_, ST_TOGGLE, sid, 0, { { 0, 1, 1, NULL } } }
 #define NUMBER(nm, syn_, sid, lo, hi, st, u) { nm, syn_, ST_NUMBER, sid, 0, { { lo, hi, st, u } } }
@@ -5699,6 +5694,10 @@ static const set_item_t s_sound[] = {
 #if CONFIG_VIBRATE
 	TOGGLE(TRN("Vibrate"), "vibration motor silent", UI_SET_VIBRATE),
 #endif
+};
+// Settings > Signaling tones: where each event sounds, then the three chains (a step is a frequency and a length; a
+// step of 0 ms ends the chain and no step is the event's standard sound). Typing digits sets a value: 1570 OK
+static const set_item_t s_sigtones[] = {
 #if CONFIG_DMR
 	LIST(TRN("DMR start tone"), "talk permit roger signaling", UI_SET_SIG_DMR + SIG_EV_BEGIN, v_sigout, n_sigout),
 	LIST(TRN("DMR end tone"), "roger signaling", UI_SET_SIG_DMR + SIG_EV_END, v_sigout, n_sigout),
@@ -5711,9 +5710,36 @@ static const set_item_t s_sound[] = {
 	LIST(TRN("FM end tone"), "roger signaling", UI_SET_SIG_FM + SIG_EV_END, v_sigout_local, n_sigout_local),
 #endif
 	LIST(TRN("FM idle tone"), "channel free signaling", UI_SET_SIG_FM + SIG_EV_IDLE, v_sigout_local, n_sigout_local),
-	LIST(TRN("Start tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_BEGIN, v_sigsnd, n_sigsnd),
-	LIST(TRN("End tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_END, v_sigsnd, n_sigsnd),
-	LIST(TRN("Idle tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_IDLE, v_sigsnd, n_sigsnd),
+	NUMBER(TRN("Start 1 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 0, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Start 1 ms"), "tone length duration signaling", UI_SET_SIG_MS + 0, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Start 2 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 1, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Start 2 ms"), "tone length duration signaling", UI_SET_SIG_MS + 1, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Start 3 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 2, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Start 3 ms"), "tone length duration signaling", UI_SET_SIG_MS + 2, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Start 4 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 3, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Start 4 ms"), "tone length duration signaling", UI_SET_SIG_MS + 3, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Start 5 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 4, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Start 5 ms"), "tone length duration signaling", UI_SET_SIG_MS + 4, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("End 1 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 5, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("End 1 ms"), "tone length duration signaling", UI_SET_SIG_MS + 5, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("End 2 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 6, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("End 2 ms"), "tone length duration signaling", UI_SET_SIG_MS + 6, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("End 3 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 7, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("End 3 ms"), "tone length duration signaling", UI_SET_SIG_MS + 7, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("End 4 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 8, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("End 4 ms"), "tone length duration signaling", UI_SET_SIG_MS + 8, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("End 5 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 9, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("End 5 ms"), "tone length duration signaling", UI_SET_SIG_MS + 9, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Idle 1 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 10, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Idle 1 ms"), "tone length duration signaling", UI_SET_SIG_MS + 10, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Idle 2 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 11, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Idle 2 ms"), "tone length duration signaling", UI_SET_SIG_MS + 11, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Idle 3 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 12, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Idle 3 ms"), "tone length duration signaling", UI_SET_SIG_MS + 12, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Idle 4 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 13, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Idle 4 ms"), "tone length duration signaling", UI_SET_SIG_MS + 13, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
+	NUMBER(TRN("Idle 5 Hz"), "tone frequency signaling", UI_SET_SIG_HZ + 14, 0, SIG_HZ_MAX, 10, " Hz"),
+	NUMBER(TRN("Idle 5 ms"), "tone length duration signaling", UI_SET_SIG_MS + 14, 0, SIG_MAX_MS, SIG_MS_UNIT, " ms"),
 };
 static const set_item_t s_display[] = {
 	NUMBER(TRN("Brightness"), "backlight", UI_SET_BRIGHTNESS, 10, 100, 10, "%"),
@@ -5886,7 +5912,8 @@ static const set_group_t groups[] = {
 	GROUP(TRN("Location"), s_location), GROUP(TRN("Connections"), s_connections),
 	GROUP_T(TRN("Power saving"), TRN("Power Saving"), s_power),
 	GROUP(TRN("Keys"), s_keys), GROUP(TRN("Key lock"), s_lock),
-	GROUP_T(TRN("My radio"), TRN("My Radio"), s_my_radio), GROUP(TRN("Advanced"), s_advanced),
+	GROUP_T(TRN("My radio"), TRN("My Radio"), s_my_radio),
+	GROUP_T(TRN("Signaling tones"), TRN("Signaling Tones"), s_sigtones), GROUP(TRN("Advanced"), s_advanced),
 };
 #define GROUPS	(sizeof groups / sizeof groups[0])
 
@@ -6074,7 +6101,7 @@ static const char *set_why_not(const set_item_t *s)
 	case UI_SET_SIG_DMR ... UI_SET_SIG_DMR_LAST:
 		return CONFIG_DMR && CONFIG_BEEP ? NULL : CONFIG_BEEP ? TR("DMR: not in this build") : TR("Tones: not in this build");
 	case UI_SET_SIG_FM ... UI_SET_SIG_FM_LAST:
-	case UI_SET_SIG_SND ... UI_SET_SIG_SND_LAST:
+	case UI_SET_SIG_HZ ... UI_SET_SIG_MS_LAST:
 		return CONFIG_BEEP ? NULL : TR("Tones: not in this build");
 	case UI_SET_SCAN_TONE:
 		return !CONFIG_BEEP ? TR("Tones: not in this build") : feats() & UI_FEAT_SCAN ? NULL : TR("Scan: not in this build");

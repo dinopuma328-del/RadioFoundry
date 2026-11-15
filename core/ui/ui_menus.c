@@ -5667,12 +5667,14 @@ static const char *const n_sfrcwid[] = { TRN("Off"), TRN("5 min"), TRN("10 min")
 static const int16_t v_ptype[] = { 0, 1, 2 };	// dmrPrivacyType_t
 static const char *const n_ptype[] = { TRN("Off"), "Motorola", "Anytone" };
 
+#if CONFIG_SIG_TONES
 // Signaling tones (core/radio/sigtone.h): where each sounds (sig_out_t). The reception's end and FM's start have no on
 // air copy: nothing is sent then
 static const int16_t v_sigout[] = { 0, 1, 2, 3, 4 };
 static const char *const n_sigout[] = { TRN("Default"), TRN("Off"), TRN("Speaker"), TRN("On air"), TRN("Speaker + air") };
 static const int16_t v_sigout_local[] = { 0, 1, 2 };
 static const char *const n_sigout_local[] = { TRN("Default"), TRN("Off"), TRN("Speaker") };
+#endif
 
 #define TOGGLE(nm, syn_, sid) { nm, syn_, ST_TOGGLE, sid, 0, { { 0, 1, 1, NULL } } }
 #define NUMBER(nm, syn_, sid, lo, hi, st, u) { nm, syn_, ST_NUMBER, sid, 0, { { lo, hi, st, u } } }
@@ -5696,6 +5698,7 @@ static const set_item_t s_sound[] = {
 	TOGGLE(TRN("Vibrate"), "vibration motor silent", UI_SET_VIBRATE),
 #endif
 };
+#if CONFIG_SIG_TONES
 // Settings > Signaling tones: where each event sounds, then a row per event that opens its chain's steps (SCR_SIG_CHAIN:
 // a step is a frequency and a length; a step of 0 ms ends the chain and no step is the event's standard sound)
 static const set_item_t s_sigtones[] = {
@@ -5715,6 +5718,7 @@ static const set_item_t s_sigtones[] = {
 	ACTION(TRN("End tone steps"), "signaling chain frequency length pitch roger", SA_SIG_END),
 	ACTION(TRN("Idle tone steps"), "signaling chain frequency length pitch channel free", SA_SIG_IDLE),
 };
+#endif
 static const set_item_t s_display[] = {
 	NUMBER(TRN("Brightness"), "backlight", UI_SET_BRIGHTNESS, 10, 100, 10, "%"),
 	LIST(TRN("Backlight Dim/Off"), "timeout", UI_SET_BACKLIGHT_S, v_backlight, n_backlight),
@@ -5887,7 +5891,10 @@ static const set_group_t groups[] = {
 	GROUP_T(TRN("Power saving"), TRN("Power Saving"), s_power),
 	GROUP(TRN("Keys"), s_keys), GROUP(TRN("Key lock"), s_lock),
 	GROUP_T(TRN("My radio"), TRN("My Radio"), s_my_radio),
-	GROUP_T(TRN("Signaling tones"), TRN("Signaling Tones"), s_sigtones), GROUP(TRN("Advanced"), s_advanced),
+#if CONFIG_SIG_TONES
+	GROUP_T(TRN("Signaling tones"), TRN("Signaling Tones"), s_sigtones),
+#endif
+	GROUP(TRN("Advanced"), s_advanced),
 };
 #define GROUPS	(sizeof groups / sizeof groups[0])
 
@@ -5996,6 +6003,7 @@ static const ui_scr_def_t settings_screen = {
 	.count = settings_count, .item = settings_item, .select = settings_select,
 };
 
+#if CONFIG_SIG_TONES
 // ======================= Signaling tone steps (Settings > Signaling tones) =======================
 // One event's five steps (the frame's arg is the sig_event_t). OK on a step opens its frequency: digits type it, Up /
 // Down / the knob step it by 10, OK takes it and opens the length, OK again saves both. BACK leaves the step as it was.
@@ -6195,6 +6203,7 @@ static void sc_summary(char *out, size_t len, uint8_t ev)
 	sb_u32(&b, n, 1);
 	sb_str(&b, n == 1 ? TR(" step") : TR(" steps"));
 }
+#endif
 
 // A group: each row shows its value; toggles and lists change on OK, numbers open an inline editor
 
@@ -6260,7 +6269,8 @@ static bool mic_agc_on(void)
 static const char *set_why_not(const set_item_t *s)
 {
 	if (s->type == ST_ACTION)
-		return s->id >= SA_SIG_BEGIN && s->id <= SA_SIG_IDLE && !CONFIG_BEEP ? TR("Tones: not in this build") : NULL;
+		return s->id >= SA_SIG_BEGIN && s->id <= SA_SIG_IDLE && !(CONFIG_BEEP && CONFIG_SIG_TONES) ?
+			TR("Tones: not in this build") : NULL;
 	switch (s->id) {
 	case UI_SET_VOICE_PROMPTS:
 		return TR("Voice prompts: not in this build");
@@ -6345,8 +6355,10 @@ static void group_item(uint16_t i, ui_item_t *it)
 		set_value_text(s, edit ? set_value : ui_svc_setting_get(s->id), it->value, sizeof it->value);
 	else if (s->id == SA_LANGUAGE)
 		str_copy(it->value, sizeof it->value, lang_name(lang_current()));
+#if CONFIG_SIG_TONES
 	else if (s->id >= SA_SIG_BEGIN && s->id <= SA_SIG_IDLE)
 		sc_summary(it->value, sizeof it->value, (uint8_t)(s->id - SA_SIG_BEGIN));
+#endif
 	if (s->id == UI_SET_PRIVACY_KEY && s->type == ST_NUMBER && !edit && ui_svc_setting_get(UI_SET_PRIVACY_TYPE) == 0)
 		strcpy(it->value, "-");
 	if (s->id == UI_SET_MIC_GAIN && !edit && mic_agc_on())
@@ -6419,7 +6431,9 @@ static void group_select(uint16_t i, bool hold)
 		case SA_MY_RADIO: ui_push(SCR_DMR_ID, 0); break;
 		case SA_RESET: ui_push(SCR_CONFIRM, 0); break;
 		case SA_LANGUAGE: ui_push(SCR_LANGUAGE, 0); break;
+#if CONFIG_SIG_TONES
 		case SA_SIG_BEGIN ... SA_SIG_IDLE: ui_push(SCR_SIG_CHAIN, (uint16_t)(s->id - SA_SIG_BEGIN)); break;
+#endif
 #if DATA_IDS
 		case SA_DATA_SERVICES: ui_push(SCR_DATA_SERVICES, 0); break;
 #endif
@@ -6955,7 +6969,7 @@ const ui_scr_def_t *const ui_scr[SCR_COUNT] = {
 #if CONFIG_REF_TRIM
 	[SCR_REF_TRIM] = &trim_screen,
 #endif
-#if CONFIG_UI_SETTINGS
+#if CONFIG_UI_SETTINGS && CONFIG_SIG_TONES
 	[SCR_SIG_CHAIN] = &sc_screen,
 #endif
 #if CONFIG_APRS_AFSK

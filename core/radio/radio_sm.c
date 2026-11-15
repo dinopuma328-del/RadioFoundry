@@ -198,7 +198,13 @@ _Static_assert(SIG_STEPS == 5, "radio_settings_t.sig_hz / sig_ms hold five steps
 // Where the event's tone goes on this channel's mode (sig_out_t)
 static uint8_t sig_out(const radio_sm_t *sm, sig_event_t ev)
 {
+#if CONFIG_SIG_TONES
 	return sm->view.ch.mode == RADIO_MODE_DMR ? sm->set.sig_dmr[ev] : sm->set.sig_fm[ev];
+#else
+	(void)sm;
+	(void)ev;
+	return SIG_OUT_DEFAULT;	// built without the chains: the radio's own sounds
+#endif
 }
 
 // Whether the event's tone sounds on the speaker instead of the radio's own: the setting says so, on a channel that
@@ -211,7 +217,7 @@ static bool sig_local_on(const radio_sm_t *sm, sig_event_t ev)
 // The event's tone on the speaker
 static void sig_local(radio_sm_t *sm, sig_event_t ev)
 {
-#if CONFIG_BEEP
+#if CONFIG_BEEP && CONFIG_SIG_TONES
 	beep_seg_t seg[SIG_STEPS];
 	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	beep_play_custom(seg, n, beep_level_now(sm), beep_shared_now());
@@ -1920,12 +1926,17 @@ static void one_shot_follow(radio_sm_t *sm, uint32_t now_ms)
 // not while the host sends its own audio
 static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 {
+#if CONFIG_SIG_TONES
 	if (sm->host_audio || sm->view.ch.no_beep || !sig_out_air(sig_out(sm, ev), ev)) {
 		return;
 	}
 	beep_seg_t seg[SIG_STEPS];
 	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	ambeVoiceTxTone(seg, n, ev == SIG_EV_END);
+#else
+	(void)sm;
+	(void)ev;
+#endif
 }
 
 static void dmr_ptt_down(radio_sm_t *sm, uint32_t now_ms)
@@ -4044,7 +4055,7 @@ static bool tx_tone(uint16_t hz)
 // goes through the rest and unkeys)
 static bool roger_start(radio_sm_t *sm, uint32_t now_ms)
 {
-	uint8_t out = sm->set.sig_fm[SIG_EV_END];
+	uint8_t out = sig_out(sm, SIG_EV_END);
 	beep_seg_t *g = sm->roger_seg;
 	uint8_t n;
 	if (out == SIG_OUT_DEFAULT) {
@@ -4054,8 +4065,10 @@ static bool roger_start(radio_sm_t *sm, uint32_t now_ms)
 		g[0] = (beep_seg_t){ RADIO_ROGER_HZ1, RADIO_ROGER_STEP_MS };
 		g[1] = (beep_seg_t){ RADIO_ROGER_HZ2, RADIO_ROGER_STEP_MS };
 		n = 2;
+#if CONFIG_SIG_TONES
 	} else if (sig_out_air(out, SIG_EV_END)) {
 		n = sig_chain(sm->set.sig_hz[SIG_EV_END], sm->set.sig_ms[SIG_EV_END], SIG_EV_END, g);
+#endif
 	} else {
 		return false;
 	}
@@ -4210,7 +4223,9 @@ static void ptt_release(radio_sm_t *sm, bool roger, uint32_t now_ms)
 		if (sm->view.dmr.state == RDMR_TX) {
 			sig_air_dmr(sm, SIG_EV_END);	// before the stack hears PTT is up: it holds the over open for it
 		} else {
+#if CONFIG_SIG_TONES
 			ambeVoiceTxToneCancel();	// a start tone for a transmission that never went on air
+#endif
 		}
 		dmr_call_ptt(false);
 		dmr_call_poll(now_ms);
@@ -4829,8 +4844,8 @@ static void persist(radio_sm_t *sm, uint32_t now_ms)
 static void clamp_settings(radio_settings_t *s)
 {
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
-		s->sig_dmr[i] = sig_out_clean(s->sig_dmr[i], (sig_event_t)i);
-		s->sig_fm[i] = sig_out_clean(s->sig_fm[i], (sig_event_t)i);
+		s->sig_dmr[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_dmr[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
+		s->sig_fm[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_fm[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
 		if (i == SIG_EV_BEGIN && (s->sig_fm[i] == SIG_OUT_AIR || s->sig_fm[i] == SIG_OUT_BOTH)) {
 			// An FM start tone on air isn't sent (the transmitter keys with the mic live): speaker only
 			s->sig_fm[i] = s->sig_fm[i] == SIG_OUT_BOTH ? SIG_OUT_LOCAL : SIG_OUT_OFF;

@@ -38,10 +38,26 @@ typedef enum {
 #define SIG_HZ_MAX	3400u	// inside the voice band the AMBE encoder carries
 
 // Whether out sounds on the speaker / goes on air. Idle has no air copy (nothing is being sent)
-bool sig_out_local(uint8_t out);
-bool sig_out_air(uint8_t out, sig_event_t ev);
+static inline bool sig_out_local(uint8_t out)
+{
+	return out == SIG_OUT_LOCAL || out == SIG_OUT_BOTH;
+}
+
+static inline bool sig_out_air(uint8_t out, sig_event_t ev)
+{
+	return ev != SIG_EV_IDLE && (out == SIG_OUT_AIR || out == SIG_OUT_BOTH);
+}
+
 // A valid out for the event (idle: no air), else DEFAULT
-uint8_t sig_out_clean(uint8_t out, sig_event_t ev);
+static inline uint8_t sig_out_clean(uint8_t out, sig_event_t ev)
+{
+	if (out >= SIG_OUT_COUNT || (ev == SIG_EV_IDLE && (out == SIG_OUT_AIR || out == SIG_OUT_BOTH))) {
+		return SIG_OUT_DEFAULT;
+	}
+	return out;
+}
+
+// The chain and the sample generator below are in sigtone.c, which builds with CONFIG_SIG_TONES only
 
 // A chain (as stored: hz[], ms10[] in SIG_MS_UNIT) into out[SIG_STEPS]; the count. An empty chain gives the event's
 // standard sound, so there is always at least one step. A frequency over SIG_HZ_MAX is cut to it; the total length is

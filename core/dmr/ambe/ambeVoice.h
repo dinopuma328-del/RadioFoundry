@@ -23,6 +23,7 @@
 #define RFOUNDRY_AMBE_VOICE_H
 
 #include <stdint.h>
+#include "config.h"
 #include <stdbool.h>
 #include "hal_audio.h"
 #include "hal_vocoder.h"
@@ -86,6 +87,7 @@ void ambeVoiceSetMicGain(uint8_t step);
 // Test signal for DMR transmissions (the debug link's RADIO op 33, RAM only): on, the encoder gets a generated tone
 // that changes pitch every 60 ms in place of the mic, so an over carries known, varying audio whatever the mic hears
 // (the HIL audio smoke test). Any task
+#if CONFIG_SIG_TONES
 // A tone sequence (up to SIG_STEPS steps of {Hz, ms}, sigtone.h) sent as voice in place of the mic: from the next block
 // of the transmission, or from its first if it has not started. Encoded as a tone frame, noise reduction off for it.
 // final: after the tone the mic stays muted until the transmission ends (an end of transmission tone). The encoder
@@ -96,6 +98,7 @@ void ambeVoiceTxToneCancel(void);
 // The tone is asked for, playing, or its frames are not yet pulled by the call stack (the source's busy: the over is
 // held open for it after PTT)
 bool ambeVoiceTxToneBusy(void);
+#endif
 void ambeVoiceSetTestSignal(bool on);
 bool ambeVoiceTestSignal(void);
 // Encode options for DMR transmissions (VOCODER_OPT_*, default VOCODER_OPT_DEFAULT; Settings > Talk & listen > Mic

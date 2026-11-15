@@ -3,6 +3,7 @@
 // DMR voice glue: call stack frames <-> FEC <-> vocoder <-> PCM blocks (ambeVoice.h)
 #include "dmr/ambe/ambeVoice.h"
 #include "dmr/ambe/ambeFec.h"
+#include "config.h"
 #include "radio/sigtone.h"
 
 #include <stddef.h>
@@ -59,6 +60,7 @@ static bool cb_mixing;
 static uint16_t mic_gain_q8 = 256;	// ambeVoiceSetMicGain: the mic samples times this / 256 before encoding
 static bool test_signal;		// ambeVoiceSetTestSignal
 
+#if CONFIG_SIG_TONES
 // A tone sequence sent in place of the mic (ambeVoiceTxTone): the request is handed over from the radio task with a
 // sequence counter; the rest is the audio callback's, but for tone_last_*, which the call task reads (busy)
 static beep_seg_t tone_req_seg[SIG_STEPS];
@@ -68,12 +70,13 @@ static uint8_t tone_req_seq, cb_tone_seq;
 static sig_gen_t tone_gen;
 static bool tone_active;		// the generator still has samples
 static bool tone_mute;			// after a final tone: silence in the mic's place until the transmission ends
-static uint32_t tx_pushed;		// frames the audio callback queued, and the call task removed (pulled or dropped)
-static uint32_t tx_pulled;
 static uint32_t tone_last_n;		// tx_pushed after the last frame of the tone
 static uint8_t tone_last_seq;		// the transmission it belongs to
 static bool tone_last_valid;
 #define TONE_AMP_Q15	14000		// about -7 dBFS: a tone frame carries its level, speech-like peaks stay below it
+#endif
+static uint32_t tx_pushed;		// frames the audio callback queued, and the call task removed (pulled or dropped)
+static uint32_t tx_pulled;
 static uint16_t test_phase;		// the test signal's phase (a full cycle is 65536) and its pitch step
 static uint8_t test_blocks;
 static uint8_t tx_prev[VOCODER_BITS];	// the transmission's previous frame (tx_repeats)
@@ -196,9 +199,12 @@ static void source_end(void *ctx)
 {
 	(void)ctx;
 	STORE(tx_end_seq, tx_seq);
+#if CONFIG_SIG_TONES
 	ambeVoiceTxToneCancel();	// a tone asked for a transmission that never went on air is not for the next one
+#endif
 }
 
+#if CONFIG_SIG_TONES
 // Voice still to send after PTT: the end tone's frames not yet pulled (dmr_voice_source_t.busy). Only while a
 // transmission runs: a request the audio side has not taken yet (it takes them in a transmission's blocks) is nothing
 // to wait for once the over has ended
@@ -215,6 +221,7 @@ static bool source_busy(void *ctx)
 	}
 	return playing || (int32_t)(LOAD(tone_last_n) - tx_pulled) > 0;
 }
+#endif
 
 // --- audio callback (audio task) ---
 
@@ -428,8 +435,11 @@ static void tx_block(const int16_t *mic)
 		stats.tx_mic_peak = 0;
 		tx_have_prev = false;
 		test_blocks = 0;
+#if CONFIG_SIG_TONES
 		tone_active = tone_mute = false;	// the request below may be for this transmission
+#endif
 	}
+#if CONFIG_SIG_TONES
 	// A tone sequence asked for: it starts with this block. n == 0 cancels the one running
 	uint8_t tseq = LOAD(tone_req_seq);
 	if (tseq != cb_tone_seq) {
@@ -445,13 +455,16 @@ static void tx_block(const int16_t *mic)
 	if (tone_active && (uint8_t)(tx_head - LOAD(tx_tail)) >= AMBE_VOICE_QUEUE) {
 		return;
 	}
+#endif
 	mic_stats(mic);	// the board's samples, before the gain scaling
 	// Options change only between frames, in this task, so both halves of a frame see the same ones. A tone is sent
 	// as a tone frame, and the noise reduction (which would take a steady tone for noise) is off for it
 	uint32_t opts = LOAD(enc_opts);
+#if CONFIG_SIG_TONES
 	if (tone_active) {
 		opts = (opts | VOCODER_OPT_TONE_FRAMES) & ~VOCODER_OPT_NOISE_REDUCTION;
 	}
+#endif
 	if (voc_ok() && voc->set_options != NULL && (!cb_enc_opts_set || opts != cb_enc_opts)) {
 		voc->set_options(opts);
 		cb_enc_opts = opts;
@@ -477,6 +490,7 @@ static void tx_block(const int16_t *mic)
 		}
 		mic = scaled;
 	}
+#if CONFIG_SIG_TONES
 	bool tone_last = false;
 	if (tone_active) {
 		bool more = sig_gen_block(&tone_gen, scaled, AUDIO_BLOCK_SAMPLES);
@@ -490,6 +504,7 @@ static void tx_block(const int16_t *mic)
 		memset(scaled, 0, sizeof(scaled));
 		mic = scaled;
 	}
+#endif
 	if (voc_ok()) {
 		voc->encode(mic, bits);
 	} else {
@@ -510,11 +525,13 @@ static void tx_block(const int16_t *mic)
 	ambeFecEncode(bits, e->frame);
 	STORE(tx_head, (uint8_t)(h + 1));
 	tx_pushed++;
+#if CONFIG_SIG_TONES
 	if (tone_last) {
 		tone_last_n = tx_pushed;
 		STORE(tone_last_seq, seq);
 		STORE(tone_last_valid, true);
 	}
+#endif
 	stats.tx_frames++;
 }
 
@@ -564,7 +581,11 @@ static const dmr_voice_sink_t sink = {
 	.begin = sink_begin, .frame = sink_frame, .lost = sink_lost, .end = sink_end, .ctx = NULL,
 };
 static const dmr_voice_source_t source = {
-	.begin = source_begin, .next = source_next, .end = source_end, .busy = source_busy, .ctx = NULL,
+	.begin = source_begin, .next = source_next, .end = source_end,
+#if CONFIG_SIG_TONES
+	.busy = source_busy,
+#endif
+	.ctx = NULL,
 };
 
 void ambeVoiceInit(const hal_audio_t *audio, const hal_vocoder_t *vocoder)
@@ -607,6 +628,7 @@ void ambeVoiceSetMixer(ambe_voice_mixer_t m)
 	STORE(mixer, m);
 }
 
+#if CONFIG_SIG_TONES
 void ambeVoiceTxTone(const beep_seg_t *steps, uint8_t n, bool final)
 {
 	if (n > SIG_STEPS) {
@@ -630,6 +652,7 @@ bool ambeVoiceTxToneBusy(void)
 {
 	return source_busy(NULL);
 }
+#endif
 
 void ambeVoiceSetTestSignal(bool on)
 {

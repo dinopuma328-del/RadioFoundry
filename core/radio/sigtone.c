@@ -4,26 +4,11 @@
 #include <string.h>
 #include "radio/sigtone.h"
 #include "hal_audio.h"
+#include "config.h"
+
+#if CONFIG_SIG_TONES
 
 #define RAMP_SAMPLES	16	// 2 ms, as beep.c: no clicks
-
-bool sig_out_local(uint8_t out)
-{
-	return out == SIG_OUT_LOCAL || out == SIG_OUT_BOTH;
-}
-
-bool sig_out_air(uint8_t out, sig_event_t ev)
-{
-	return ev != SIG_EV_IDLE && (out == SIG_OUT_AIR || out == SIG_OUT_BOTH);
-}
-
-uint8_t sig_out_clean(uint8_t out, sig_event_t ev)
-{
-	if (out >= SIG_OUT_COUNT || (ev == SIG_EV_IDLE && (out == SIG_OUT_AIR || out == SIG_OUT_BOTH))) {
-		return SIG_OUT_DEFAULT;
-	}
-	return out;
-}
 
 // Pitches follow the beeps' (beep.c): a sequence reads as the same family of sounds
 static const beep_seg_t s_permit[] = { { 1600, 50 }, { 0, 40 }, { 1600, 50 } };
@@ -141,3 +126,5 @@ bool sig_gen_block(sig_gen_t *g, int16_t *pcm, unsigned count)
 	}
 	return g->i < g->n;
 }
+
+#endif

@@ -413,6 +413,7 @@ build() {
 	rm -f "$target.elf"		# always relink: the size report reads the linker's memory-usage lines
 	if ! make BOARD="$b" BUILD="$dir" -j"$JOBS" "$@" > "$log" 2>&1; then
 		grep -E 'error|undefined' "$log" | head -10
+		tail -25 "$log" | cut -c1-300
 		bad "$b $name: build failed ($*; see $log)"
 		echo "| $b | $name | build failed | | | | |" >> "$REPORT"
 		return
@@ -427,6 +428,7 @@ build() {
 			ok "$b $name: $(grep -E '^stack check .*: every task fits' "$dir.stack.log" | sed 's/^stack check [^:]*: //')"
 		else
 			grep -E '^  [^ ]+ +(OVER|\?) ' "$dir.stack.log"
+			sed -n 1,70p "$dir.stack.log"
 			bad "$b $name: stack check (see $dir.stack.log)"
 		fi
 	fi

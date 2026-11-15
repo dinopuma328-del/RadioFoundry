@@ -12,7 +12,7 @@ import { decode, encode, empty, remove, validate, newChannel, newContact, number
 import { LIMITS, decodeGeneral } from "../codeplug/records.js";
 import { CpsSerial, TransportError, estimate, keepIdentity, IDENTITY, iddbRanges } from "../codeplug/transport.js";
 import { FastError } from "../codeplug/fastlink.js";
-import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_MS_MAX, SIG_STEPS } from "../codeplug/kv.js";
+import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_HZ_UNIT, SIG_MS_MAX, SIG_STEPS } from "../codeplug/kv.js";
 import { toSerial, CLICK_WAIT_MS } from "../flasher/netmode.js";
 import { convert as convertDb, readHeader as dbHeader } from "../codeplug/iddb.js";
 import { convertIddb, iddbEnd } from "../codeplug/sources/output.js";
@@ -399,7 +399,7 @@ function radioTab() {
 			h("span", { class: "small muted" }, t("editor.general.tone_help")));
 	};
 	// a signaling tone record of the settings area (kv.js RECORD_KEYS, codeplug-settings.md 3.3): Not set, or Set with the
-	// outputs and the five steps. A value out of range is the Problems tab's to say
+	// outputs and the ten steps. A value out of range is the Problems tab's to say
 	const sigBlock = (row) => {
 		const rec = g[row.name];
 		const id = `g-${row.name}`;
@@ -419,7 +419,7 @@ function radioTab() {
 		};
 		// a step's cell: a number that stays as typed until it is valid; an out of range one is marked, never clamped
 		const cell = (key, i, max, step) => {
-			const bad = rec[key][i] > max || (key === "ms" && rec[key][i] % 10 !== 0);
+			const bad = rec[key][i] > max || rec[key][i] % step !== 0;
 			const inp = h("input", { type: "number", min: "0", max: String(max), step: String(step), value: String(rec[key][i]), inputmode: "numeric",
 				class: bad ? "sig-bad" : "", "aria-invalid": bad ? "true" : "false",
 				"aria-label": `${t("editor.sig.step", { n: i + 1 })} ${t(`editor.sig.${key === "hz" ? "hz" : "ms"}`)}` });
@@ -435,7 +435,7 @@ function radioTab() {
 			const dim = ended;
 			if (rec.ms[i] === 0) ended = true;
 			return h("tr", { class: dim ? "sig-dim" : "" }, h("th", { scope: "row" }, String(i + 1)),
-				cell("hz", i, SIG_HZ_MAX, 1), cell("ms", i, SIG_MS_MAX, 10));
+				cell("hz", i, SIG_HZ_MAX, SIG_HZ_UNIT), cell("ms", i, SIG_MS_MAX, 10));
 		});
 		let total = 0;
 		for (const m of rec.ms) {
@@ -444,13 +444,17 @@ function radioTab() {
 		}
 		const sum = h("p", { class: "small sig-total" + (total > SIG_MS_MAX ? " ed-err" : " muted") },
 			total === 0 ? t("editor.sig.empty") : t(total > SIG_MS_MAX ? "editor.sig.over" : "editor.sig.total", { ms: total, max: SIG_MS_MAX }));
+		const roll = h("div", { class: "sig-roll", role: "img", "aria-label": t("editor.sig.roll", { ms: total }) });
+		roll.innerHTML = sigRollSvg(rec);
+		const play = button(t("editor.sig.play"), () => sigPlay(rec, play, t), { quiet: true });
 		return h("section", { class: "sig-card" },
-			h("div", { class: "sig-head" }, title, button(t("editor.sig.reset"), () => put(null), { quiet: true })),
-			h("div", { class: "sig-outs" }, outputs("dmr", row.air), outputs("fm", row.fmAir)),
-			h("table", { class: "sig-steps" },
-				h("thead", {}, h("tr", {}, h("th", {}, t("editor.sig.step_col")), h("th", {}, `${t("editor.sig.hz")}`), h("th", {}, `${t("editor.sig.ms")}`))),
-				h("tbody", {}, ...rows)),
-			sum);
+			h("div", { class: "sig-head" }, title, play, button(t("editor.sig.reset"), () => put(null), { quiet: true })),
+			h("div", { class: "sig-body" },
+				h("div", { class: "sig-side" }, h("div", { class: "sig-outs" }, outputs("dmr", row.air), outputs("fm", row.fmAir)), roll, sum),
+				h("div", { class: "sig-tables" }, ...[rows.slice(0, SIG_STEPS / 2), rows.slice(SIG_STEPS / 2)].map((half) =>
+					h("table", { class: "sig-steps" },
+						h("thead", {}, h("tr", {}, h("th", {}, t("editor.sig.step_col")), h("th", {}, t("editor.sig.hz")), h("th", {}, t("editor.sig.ms")))),
+						h("tbody", {}, ...half))))));
 	};
 	const parts = [
 		h("div", { class: "form-grid ed-radio-form" },
@@ -477,6 +481,59 @@ function radioTab() {
 			h("dt", {}, t("editor.firmware")), h("dd", {}, p?.git || "?")));
 	}
 	return h("div", {}, ...parts);
+}
+
+// --- Signaling tone roll and preview ---
+
+// The chain as a pitch against time: a bar a step, as wide as it lasts on a fixed axis of SIG_MS_MAX and as high as its
+// frequency (0 to SIG_HZ_MAX). A pause is a tick on the baseline. Steps after the first of 0 ms are not drawn; what is
+// past the limit is marked. Numbers only, so it is safe to set as markup
+function sigRollSvg(rec) {
+	const W = 900, H = 72, pad = 2;
+	let x = 0, out = "";
+	for (let i = 0; i < SIG_STEPS && rec.ms[i] > 0; i++) {
+		const w = rec.ms[i], hz = Math.min(rec.hz[i], SIG_HZ_MAX);
+		const over = x + w > SIG_MS_MAX;
+		const cls = over ? "sig-r-over" : "sig-r-bar";
+		if (hz === 0) out += `<rect class="sig-r-pause" x="${x}" y="${H - 3}" width="${Math.max(w - 2, 1)}" height="3"/>`;
+		else {
+			const bh = Math.max(4, Math.round((hz / SIG_HZ_MAX) * (H - pad * 2)));
+			out += `<rect class="${cls}" x="${x}" y="${H - bh}" width="${Math.max(w - 2, 1)}" height="${bh}" rx="2"/>`;
+		}
+		x += w;
+	}
+	const grid = [300, 600].map((g) => `<line class="sig-r-grid" x1="${g}" x2="${g}" y1="0" y2="${H}"/>`).join("");
+	return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" focusable="false"><rect class="sig-r-bg" width="${W}" height="${H}" rx="4"/>${grid}${out}</svg>`;
+}
+
+let sigAudio = null;
+// Plays the chain on the browser's speaker: a sine a step with 2 ms fades, as the radio makes it (sigtone.c)
+function sigPlay(rec, btn, t) {
+	try {
+		sigAudio = sigAudio || new (window.AudioContext || window.webkitAudioContext)();
+		const ctx = sigAudio;
+		const now = ctx.currentTime + 0.05;
+		let at = now;
+		for (let i = 0; i < SIG_STEPS && rec.ms[i] > 0; i++) {
+			const d = Math.min(rec.ms[i], SIG_MS_MAX) / 1000;
+			if (rec.hz[i] > 0) {
+				const o = ctx.createOscillator(), g = ctx.createGain();
+				o.frequency.value = Math.min(rec.hz[i], SIG_HZ_MAX);
+				g.gain.setValueAtTime(0, at);
+				g.gain.linearRampToValueAtTime(0.25, at + 0.002);
+				g.gain.setValueAtTime(0.25, Math.max(at + 0.002, at + d - 0.002));
+				g.gain.linearRampToValueAtTime(0, at + d);
+				o.connect(g).connect(ctx.destination);
+				o.start(at);
+				o.stop(at + d + 0.01);
+			}
+			at += d;
+		}
+		btn.disabled = true;
+		setTimeout(() => { btn.disabled = false; }, Math.max(100, (at - now) * 1000 + 100));
+	} catch {
+		btn.textContent = t("editor.sig.no_audio");
+	}
 }
 
 // --- Problems tab ---

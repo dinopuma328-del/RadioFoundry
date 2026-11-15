@@ -1981,5 +1981,8 @@
  "editor.sig.step_col": "步骤",
  "editor.sig.total": "共 {ms} ms,上限 {max} ms",
  "editor.sig.over": "共 {ms} ms:电台会在 {max} ms 处截断",
+ "editor.sig.play": "播放",
+ "editor.sig.roll": "链路的音高随时间变化，{ms} 毫秒",
+ "editor.sig.no_audio": "此处无法播放",
  "editor.sig.empty": "无步骤:使用标准声音"
 }

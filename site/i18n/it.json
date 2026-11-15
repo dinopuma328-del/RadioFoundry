@@ -1981,5 +1981,8 @@
  "editor.sig.step_col": "Passo",
  "editor.sig.total": "Totale {ms} ms su {max} ms",
  "editor.sig.over": "Totale {ms} ms: la radio lo taglia a {max} ms",
+ "editor.sig.play": "Riproduci",
+ "editor.sig.roll": "La catena come tono nel tempo, {ms} ms",
+ "editor.sig.no_audio": "Nessun audio qui",
  "editor.sig.empty": "Nessun passo: il suono standard"
 }

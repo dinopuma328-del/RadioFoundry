@@ -427,6 +427,7 @@ build() {
 			ok "$b $name: $(grep -E '^stack check .*: every task fits' "$dir.stack.log" | sed 's/^stack check [^:]*: //')"
 		else
 			grep -E '^  [^ ]+ +(OVER|\?) ' "$dir.stack.log"
+			sed -n 1,70p "$dir.stack.log"
 			bad "$b $name: stack check (see $dir.stack.log)"
 		fi
 	fi

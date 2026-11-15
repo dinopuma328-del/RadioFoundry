@@ -1658,7 +1658,6 @@
  "editor.sig.idle": "Tono de canal libre",
  "editor.sig.dmr": "Salida en DMR",
  "editor.sig.fm": "Salida en FM",
- "editor.sig.set": "Definido",
  "editor.sig.out.0": "El sonido propio de la radio",
  "editor.sig.out.1": "Apagado",
  "editor.sig.out.2": "Altavoz",
@@ -1975,5 +1974,12 @@
  "flash.backup.failed": "La copia de seguridad se detuvo antes de terminar y no se guardó nada. {error}",
  "flash.backup.retry_how": "Elige Reintentar para empezar la copia de nuevo. Si vuelve a detenerse, apaga y enciende la radio, espera a su pantalla de inicio y vuelve a intentarlo. Si sigue deteniéndose, elige Solo calibración para guardar al menos la calibración de fábrica, e informa del problema.",
  "flash.backup.retry_how_small": "Elige Reintentar. Si vuelve a detenerse, apaga y enciende la radio, espera a su pantalla de inicio y vuelve a intentarlo. Si sigue deteniéndose, informa del problema.",
- "flash.backup.after_channels": "Después de la copia de seguridad, el instalador convierte los canales, zonas y contactos originales al formato de RadioFoundry y los escribe en la radio. La copia de seguridad conserva el codeplug original. Si no se hace copia de seguridad, pregunta antes de escribirlos."
+ "flash.backup.after_channels": "Después de la copia de seguridad, el instalador convierte los canales, zonas y contactos originales al formato de RadioFoundry y los escribe en la radio. La copia de seguridad conserva el codeplug original. Si no se hace copia de seguridad, pregunta antes de escribirlos.",
+ "editor.sig.unset": "No definido: la radio mantiene el suyo",
+ "editor.sig.customize": "Personalizar",
+ "editor.sig.reset": "No definido",
+ "editor.sig.step_col": "Paso",
+ "editor.sig.total": "Total {ms} ms de {max} ms",
+ "editor.sig.over": "Total {ms} ms: la radio lo corta a {max} ms",
+ "editor.sig.empty": "Sin pasos: el sonido estándar"
 }

@@ -1658,7 +1658,6 @@
  "editor.sig.idle": "Idle Tone",
  "editor.sig.dmr": "DMR output",
  "editor.sig.fm": "FM output",
- "editor.sig.set": "Set",
  "editor.sig.out.0": "The radio's own sound",
  "editor.sig.out.1": "Off",
  "editor.sig.out.2": "Speaker",
@@ -1975,5 +1974,12 @@
  "flash.backup.failed": "The backup stopped before it finished, and nothing was saved. {error}",
  "flash.backup.retry_how": "Choose Try Again to start the backup over. If it stops again, turn the radio off and on, wait for its home screen, and try again. If it keeps stopping, choose Calibration only so that at least the factory calibration is saved, and report the problem.",
  "flash.backup.retry_how_small": "Choose Try Again. If it stops again, turn the radio off and on, wait for its home screen, and try again. If it keeps stopping, report the problem.",
- "flash.backup.after_channels": "After the backup, the installer converts the original channels, zones and contacts for RadioFoundry and writes them to the radio. The backup keeps the original codeplug. Without a backup, it asks before writing them."
+ "flash.backup.after_channels": "After the backup, the installer converts the original channels, zones and contacts for RadioFoundry and writes them to the radio. The backup keeps the original codeplug. Without a backup, it asks before writing them.",
+ "editor.sig.unset": "Not set: the radio keeps its own setting",
+ "editor.sig.customize": "Customize",
+ "editor.sig.reset": "Not set",
+ "editor.sig.step_col": "Step",
+ "editor.sig.total": "Total {ms} ms of {max} ms",
+ "editor.sig.over": "Total {ms} ms: the radio cuts it at {max} ms",
+ "editor.sig.empty": "No steps: the standard sound"
 }

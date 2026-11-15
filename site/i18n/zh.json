@@ -1658,7 +1658,6 @@
  "editor.sig.idle": "空闲音",
  "editor.sig.dmr": "DMR 输出",
  "editor.sig.fm": "FM 输出",
- "editor.sig.set": "已设置",
  "editor.sig.out.0": "电台自己的声音",
  "editor.sig.out.1": "关闭",
  "editor.sig.out.2": "扬声器",
@@ -1975,5 +1974,12 @@
  "flash.backup.failed": "备份未完成即中断，未保存任何内容。{error}",
  "flash.backup.retry_how": "选择“重试”重新开始备份。若再次中断，请关闭电台再开机，等待主屏幕出现后重试。若仍反复中断，请选择“仅校准”，至少保存出厂校准，并报告问题。",
  "flash.backup.retry_how_small": "选择“重试”。若再次中断，请关闭电台再开机，等待主屏幕出现后重试。若仍反复中断，请报告问题。",
- "flash.backup.after_channels": "备份后，安装程序会转换原厂的信道、区域和联系人供 RadioFoundry 使用并写入电台。备份保留原厂电台频率。没有备份时，写入前会先询问。"
+ "flash.backup.after_channels": "备份后，安装程序会转换原厂的信道、区域和联系人供 RadioFoundry 使用并写入电台。备份保留原厂电台频率。没有备份时，写入前会先询问。",
+ "editor.sig.unset": "未设置:电台保持自己的设置",
+ "editor.sig.customize": "自定义",
+ "editor.sig.reset": "不设置",
+ "editor.sig.step_col": "步骤",
+ "editor.sig.total": "共 {ms} ms,上限 {max} ms",
+ "editor.sig.over": "共 {ms} ms:电台会在 {max} ms 处截断",
+ "editor.sig.empty": "无步骤:使用标准声音"
 }

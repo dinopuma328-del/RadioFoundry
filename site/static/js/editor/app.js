@@ -12,7 +12,7 @@ import { decode, encode, empty, remove, validate, newChannel, newContact, number
 import { LIMITS, decodeGeneral } from "../codeplug/records.js";
 import { CpsSerial, TransportError, estimate, keepIdentity, IDENTITY, iddbRanges } from "../codeplug/transport.js";
 import { FastError } from "../codeplug/fastlink.js";
-import { areaForWrite, KEYS, RECORD_KEYS, SIG_STEPS } from "../codeplug/kv.js";
+import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_MS_MAX, SIG_STEPS } from "../codeplug/kv.js";
 import { toSerial, CLICK_WAIT_MS } from "../flasher/netmode.js";
 import { convert as convertDb, readHeader as dbHeader } from "../codeplug/iddb.js";
 import { convertIddb, iddbEnd } from "../codeplug/sources/output.js";
@@ -402,34 +402,55 @@ function radioTab() {
 	// outputs and the five steps. A value out of range is the Problems tab's to say
 	const sigBlock = (row) => {
 		const rec = g[row.name];
+		const id = `g-${row.name}`;
 		const put = (next) => change(t("editor.undo.edit"), () => (S.model.general = { ...S.model.general, [row.name]: next }));
-		const sel = h("select", { id: "g-" + row.name },
-			h("option", { value: "" }, t("editor.general.not_set")),
-			h("option", { value: "1" }, t("editor.sig.set")));
-		sel.value = rec == null ? "" : "1";
-		sel.addEventListener("change", () => put(sel.value === "" ? null
-			: { dmr: 0, fm: 0, hz: Array(SIG_STEPS).fill(0), ms: Array(SIG_STEPS).fill(0) }));
-		const head = h("div", { class: "form-row" }, h("label", { for: "g-" + row.name }, t(`editor.sig.${row.name.slice(3).toLowerCase()}`)), sel);
-		if (rec == null) return head;
+		const title = h("h4", { class: "sig-title" }, t(`editor.sig.${row.name.slice(3).toLowerCase()}`));
+		if (rec == null) {
+			return h("section", { class: "sig-card sig-off" }, h("div", { class: "sig-head" }, title,
+				h("span", { class: "small muted sig-state" }, t("editor.sig.unset")),
+				button(t("editor.sig.customize"), () => put({ dmr: 0, fm: 0, hz: Array(SIG_STEPS).fill(0), ms: Array(SIG_STEPS).fill(0) }), { quiet: true })));
+		}
 		const outputs = (key, air) => {
-			const o = h("select", { id: `g-${row.name}-${key}` },
+			const o = h("select", { id: `${id}-${key}` },
 				...[0, 1, 2, 3, 4].filter((v) => air || (v !== 3 && v !== 4)).map((v) => h("option", { value: String(v) }, t(`editor.sig.out.${v}`))));
 			o.value = String(rec[key]);
 			o.addEventListener("change", () => put({ ...rec, [key]: Number(o.value) }));
 			return h("div", { class: "form-row" }, h("label", { for: o.id }, t(`editor.sig.${key}`)), o);
 		};
-		const num = (key, i, unit) => {
-			const inp = h("input", { type: "number", min: "0", step: unit === "ms" ? "10" : "1", value: String(rec[key][i]), size: 5,
-				"aria-label": `${t("editor.sig.step", { n: i + 1 })} ${t(`editor.sig.${unit}`)}` });
+		// a step's cell: a number that stays as typed until it is valid; an out of range one is marked, never clamped
+		const cell = (key, i, max, step) => {
+			const bad = rec[key][i] > max || (key === "ms" && rec[key][i] % 10 !== 0);
+			const inp = h("input", { type: "number", min: "0", max: String(max), step: String(step), value: String(rec[key][i]), inputmode: "numeric",
+				class: bad ? "sig-bad" : "", "aria-invalid": bad ? "true" : "false",
+				"aria-label": `${t("editor.sig.step", { n: i + 1 })} ${t(`editor.sig.${key === "hz" ? "hz" : "ms"}`)}` });
 			inp.addEventListener("change", () => {
 				const n = Math.trunc(Number(inp.value));
 				put({ ...rec, [key]: rec[key].map((x, j) => (j === i ? (Number.isFinite(n) && n >= 0 ? n : 0) : x)) });
 			});
-			return h("span", {}, inp, " ", t(`editor.sig.${unit}`));
+			return h("td", {}, inp);
 		};
-		const steps = Array.from({ length: SIG_STEPS }, (_, i) =>
-			h("div", { class: "form-row" }, h("span", {}, t("editor.sig.step", { n: i + 1 })), num("hz", i, "hz"), num("ms", i, "ms")));
-		return h("div", {}, head, outputs("dmr", row.air), outputs("fm", row.fmAir), ...steps);
+		// the chain ends at the first step of 0 ms (kv.js, sigtone.h), so the steps after it are shown dimmed
+		let ended = false;
+		const rows = Array.from({ length: SIG_STEPS }, (_, i) => {
+			const dim = ended;
+			if (rec.ms[i] === 0) ended = true;
+			return h("tr", { class: dim ? "sig-dim" : "" }, h("th", { scope: "row" }, String(i + 1)),
+				cell("hz", i, SIG_HZ_MAX, 1), cell("ms", i, SIG_MS_MAX, 10));
+		});
+		let total = 0;
+		for (const m of rec.ms) {
+			if (m === 0) break;
+			total += m;
+		}
+		const sum = h("p", { class: "small sig-total" + (total > SIG_MS_MAX ? " ed-err" : " muted") },
+			total === 0 ? t("editor.sig.empty") : t(total > SIG_MS_MAX ? "editor.sig.over" : "editor.sig.total", { ms: total, max: SIG_MS_MAX }));
+		return h("section", { class: "sig-card" },
+			h("div", { class: "sig-head" }, title, button(t("editor.sig.reset"), () => put(null), { quiet: true })),
+			h("div", { class: "sig-outs" }, outputs("dmr", row.air), outputs("fm", row.fmAir)),
+			h("table", { class: "sig-steps" },
+				h("thead", {}, h("tr", {}, h("th", {}, t("editor.sig.step_col")), h("th", {}, `${t("editor.sig.hz")}`), h("th", {}, `${t("editor.sig.ms")}`))),
+				h("tbody", {}, ...rows)),
+			sum);
 	};
 	const parts = [
 		h("div", { class: "form-grid ed-radio-form" },
@@ -447,7 +468,7 @@ function radioTab() {
 			onOff("txDenyTone", t("editor.general.tx_deny_tone"))),
 		h("h3", {}, t("editor.sig.title")),
 		h("p", { class: "small muted" }, t("editor.sig.help")),
-		...RECORD_KEYS.map(sigBlock),
+		h("div", { class: "sig-grid" }, ...RECORD_KEYS.map(sigBlock)),
 	];
 	if (S.conn) {
 		const p = S.conn.probe;

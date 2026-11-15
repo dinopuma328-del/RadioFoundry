@@ -500,7 +500,7 @@ replace it with the sequence. The idle event has no on air copy, and nor has the
 with the microphone live): `clamp_settings` maps those to what the speaker can do. A channel with "no beep" has none of
 the speaker or on air copies. The tones on the speaker are the `BEEP_CUSTOM` pattern of `beep.c` (`beep_play_custom`:
 two copies of the steps alternate, so a pattern still playing is not rewritten), and a *default* output keeps the fixed
-beeps and their Settings > Sound switches. The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (5) steps, each a frequency (0 = a pause, up to
+beeps and their Settings > Sound switches (the FM roger beep has none: `roger_beep` is set over the debug link). The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (5) steps, each a frequency (0 = a pause, up to
 `SIG_HZ_MAX`, 3400 Hz) and a length (multiples of 10 ms), the same shape as the Frequency / Period rows of a CPS alert
 tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG_MAX_MS` (600 ms). A chain with no step
 is the event's standard sound (the permit beep at the start, the call end beep otherwise). Settings > Signaling tones

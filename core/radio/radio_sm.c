@@ -1196,6 +1196,8 @@ static uint8_t hang_s(uint16_t ms, uint8_t dflt)
 // from beep_play on); the hold lasts while the beep plays or its audio is still in the board's buffers, so none of it
 // is left to reach the modulator
 #define PERMIT_HOLD_MIN_MS	40u
+// Longest our DMR end tone waits for the audio path to open after the transmission (the engine's last burst)
+#define DMR_END_WAIT_MS		400u
 
 static bool permit_busy(void)
 {
@@ -1858,10 +1860,23 @@ static void dmr_follow(radio_sm_t *sm, uint32_t now_ms)
 					sig_local(sm, SIG_EV_IDLE);
 				}
 			} else if (sm->dmr_prev_state == RDMR_TX && st != RDMR_TX && sig_local_on(sm, SIG_EV_END)) {
-				sig_local(sm, SIG_EV_END);	// our transmission is over
+				// Our transmission is over, but the engine may still be sending its last burst: a board whose
+				// audio path is gated drops what is queued meanwhile, and the tone was heard half. Wait for it
+				sm->dmr_end_wait = true;
+				sm->dmr_end_ms = now_ms;
 			}
 		}
 		sm->dmr_prev_state = st;
+	}
+	if (sm->dmr_end_wait) {
+		const hal_audio_t *a = board.audio;
+		bool blocked = a != NULL && a->speaker_blocked != NULL && a->speaker_blocked();
+		if (st == RDMR_TX || (!blocked && !sm->dmr_keyed) || now_ms - sm->dmr_end_ms >= DMR_END_WAIT_MS) {
+			sm->dmr_end_wait = false;
+			if (st != RDMR_TX) {
+				sig_local(sm, SIG_EV_END);
+			}
+		}
 	}
 }
 

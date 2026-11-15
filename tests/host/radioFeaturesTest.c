@@ -3815,6 +3815,50 @@ static void test_sig_dmr(void)
 	board.caps = caps;
 }
 
+// A board whose audio path is gated while the engine sends its last burst: the end tone on the speaker waits for the
+// gate (what is queued while it is closed is dropped when it opens, and the tone was heard half)
+static bool gate_closed;
+static bool a_blocked(void) { return gate_closed; }
+static void test_sig_dmr_end_gate(void)
+{
+	static const hal_audio_t gated = { .start = a_start, .stop = a_stop, .speaker_pcm = a_pcm, .speaker_blocked = a_blocked };
+	const hal_audio_t *saved = board.audio;
+	board.audio = &gated;
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_begin_off);
+	settings(set_sig_dmr_end_local);
+	beep_stats_t b0, b1;
+	for (int stuck = 0; stuck < 2; stuck++) {
+		req(RREQ_PTT, 1);
+		run(600);
+		gate_closed = true;
+		beep_get_stats(&b0);
+		req(RREQ_PTT, 0);
+		for (int t = 0; t < 400 && sm.view.dmr.state == RDMR_TX; t++) {
+			run(10);			// the stack's tail hold runs out
+		}
+		run(150);
+		beep_get_stats(&b1);
+		CHECK(sm.view.dmr.state != RDMR_TX);
+		CHECK(b1.played == b0.played);		// the gate is closed: nothing queued to be dropped
+		if (stuck == 0) {
+			gate_closed = false;
+			run(100);
+			beep_get_stats(&b1);
+			CHECK(b1.played == b0.played + 1);	// played whole once it opened
+		} else {
+			run(600);			// a gate that never opens: the tone is not lost for good
+			beep_get_stats(&b1);
+			CHECK(b1.played == b0.played + 1);
+			gate_closed = false;
+		}
+		run(1000);
+	}
+	board.audio = saved;
+}
+
 // Signaling tones on air in DMR: the start tone is the first voice of the transmission, the end tone goes after the last
 // and holds the over open until the call stack has it all (the mic in this test is silent: a block that isn't is a tone)
 static void set_sig_dmr_begin_air_blip(radio_settings_t *s)
@@ -4334,6 +4378,7 @@ int main(void)
 	test_dmr_permit_before_key();
 	test_sig_fm();
 	test_sig_dmr();
+	test_sig_dmr_end_gate();
 	test_sig_dmr_air();
 	test_tone_keys();
 	test_dmr_short_press_wake();

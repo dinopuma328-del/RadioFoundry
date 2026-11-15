@@ -14,11 +14,11 @@
 static const beep_seg_t s_permit[] = { { 1600, 50 }, { 0, 40 }, { 1600, 50 } };
 static const beep_seg_t s_end[] = { { 1200, 50 }, { 0, 30 }, { 900, 70 } };
 
-// The outputs a record may hold: what the menu offers (an FM start tone is not sent on air, an end of reception has no
-// air copy), so a value the radio would change reads as absent instead
-static bool rec_out_ok(uint8_t out, sig_event_t ev, bool fm)
+// The outputs a record may hold: what the menu offers (an end of reception has no air copy), so a value the radio
+// would change reads as absent instead
+static bool rec_out_ok(uint8_t out, sig_event_t ev)
 {
-	return out == sig_out_clean(out, ev) && !(fm && ev == SIG_EV_BEGIN && sig_out_air(out, ev));
+	return out == sig_out_clean(out, ev);
 }
 
 bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r)
@@ -37,7 +37,7 @@ bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r)
 			return false;
 		}
 	}
-	return rec_out_ok(r->dmr, ev, false) && rec_out_ok(r->fm, ev, true);
+	return rec_out_ok(r->dmr, ev) && rec_out_ok(r->fm, ev);
 }
 
 void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN])

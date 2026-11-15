@@ -496,8 +496,9 @@ all (`SIG_MAX_MS`), a pause being a step of 0 Hz: the shape of the rows of a CPS
 
 Output (`sig_out_t`): *default* leaves the row above as it was and an older settings record reads it, *off* silences
 the event (the talk permit, the call end beep and the roger beep included), *speaker*, *on air* and *speaker + air*
-replace it with the sequence. The idle event has no on air copy, and nor has the FM start event (the transmitter keys
-with the microphone live): `clamp_settings` maps those to what the speaker can do. A channel with "no beep" has none of
+replace it with the sequence. The idle event has no on air copy: `clamp_settings` maps it to what the speaker can do. The FM start tone
+on air plays right after the transmitter keys (`fm_lead_start`, on the `roger_seg` chain through `tx_tone`) and the
+microphone goes live when it ends; releasing the PTT during it cancels it. A board without `tx_tone` sends none. A channel with "no beep" has none of
 the speaker or on air copies. The tones on the speaker are the `BEEP_CUSTOM` pattern of `beep.c` (`beep_play_custom`:
 two copies of the steps alternate, so a pattern still playing is not rewritten), and a *default* output keeps the fixed
 beeps and their Settings > Sound switches (the FM roger beep has none: `roger_beep` is set over the debug link). The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (5) steps, each a frequency (0 = a pause, up to
@@ -526,7 +527,7 @@ specified here. A start tone is sent with the host's audio (USRP) never, and a s
 can hold waits for the call stack, which delays the voice that much. The tone counts in the TX time-out.
 
 On the speaker the start tone follows the board: a board with `CAP_BEEP_NOT_ON_AIR` plays a DMR start tone before keying,
-in the talk permit's hold (`permit_before_key`), and plays no FM start tone (it cannot beep while it transmits). The end
+in the talk permit's hold (`permit_before_key`), and plays no FM start tone on the speaker (it cannot beep while it transmits). The end
 tone plays once the transmitter is off.
 
 

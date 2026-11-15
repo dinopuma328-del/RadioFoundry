@@ -5707,7 +5707,11 @@ static const set_item_t s_sigtones[] = {
 	LIST(TRN("DMR end tone"), "roger signaling", UI_SET_SIG_DMR + SIG_EV_END, v_sigout, n_sigout),
 	LIST(TRN("DMR idle tone"), "channel free signaling", UI_SET_SIG_DMR + SIG_EV_IDLE, v_sigout_local, n_sigout_local),
 #endif
+#if CONFIG_FM_TX_TONES
+	LIST(TRN("FM start tone"), "signaling", UI_SET_SIG_FM + SIG_EV_BEGIN, v_sigout, n_sigout),
+#else
 	LIST(TRN("FM start tone"), "signaling", UI_SET_SIG_FM + SIG_EV_BEGIN, v_sigout_local, n_sigout_local),
+#endif
 #if CONFIG_FM_TX_TONES
 	LIST(TRN("FM end tone"), "roger signaling", UI_SET_SIG_FM + SIG_EV_END, v_sigout, n_sigout),
 #else

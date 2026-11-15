@@ -38,7 +38,7 @@ export const SIG_HZ_MAX = 3400;
 export const SIG_MS_MAX = 600;	// a step's length: the chain's total is cut to it by the radio
 export const SIG_REC_LEN = 2 + 2 * SIG_STEPS + SIG_STEPS;
 export const RECORD_KEYS = [
-	{ name: "sigBegin", key: 0x0007, type: "record", air: true, fmAir: false },
+	{ name: "sigBegin", key: 0x0007, type: "record", air: true, fmAir: true },
 	{ name: "sigEnd", key: 0x0008, type: "record", air: true, fmAir: true },
 	{ name: "sigIdle", key: 0x0009, type: "record", air: false, fmAir: false },
 ];

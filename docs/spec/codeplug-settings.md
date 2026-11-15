@@ -183,7 +183,7 @@ for. 17 bytes, little endian:
 - A record shorter than 17 bytes reads with the missing fields zero. A longer one (a later version) is read from the
   front.
 - The record is absent for the reader when a field is outside what the setting takes: an output of 3 or 4 for the end
-  of a reception, an FM start tone on air (it is not sent), a frequency over 3400 Hz or a length over 600 ms. Nothing is
+  of a reception, a frequency over 3400 Hz or a length over 600 ms. Nothing is
   clamped (3.1).
 - A record whose key is present holds over the radio's own copy (5.2). The radio writes the whole record when one of
   its fields changes from the menu, and keeps the bytes after the 17th (4).

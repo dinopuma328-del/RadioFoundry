@@ -210,7 +210,7 @@ pick where the tone sounds, and you build the tone yourself, step by step.
 | On air | In your transmission, so the other stations hear it. DMR sends it as voice; FM as a tone on the carrier |
 | Speaker + air | Both |
 
-The idle tone and the FM start tone have no On air choice: nothing is sent at those moments.
+The idle tone has no On air choice: nothing is sent at that moment. An FM start tone on air plays right after the radio keys, before your voice goes out; let go of PTT and it stops.
 
 **The tone itself** is a chain of up to five steps per event, like the Frequency and Period rows of a CPS alert tone
 page. The rows **Start tone steps**, **End tone steps** and **Idle tone steps** show how many steps each chain has

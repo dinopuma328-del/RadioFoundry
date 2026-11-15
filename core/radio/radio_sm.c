@@ -4110,6 +4110,7 @@ static bool roger_start(radio_sm_t *sm, uint32_t now_ms)
 	}
 	sm->roger_n = n;
 	sm->roger_i = 0;
+	sm->roger_lead = false;
 	sm->roger_ms = now_ms != 0 ? now_ms : 1;
 	return true;
 }
@@ -4122,6 +4123,10 @@ static void roger_poll(radio_sm_t *sm, uint32_t now_ms)
 		if (++sm->roger_i >= sm->roger_n) {
 			tx_tone(0);
 			sm->roger_ms = 0;
+			if (sm->roger_lead) {
+				sm->roger_lead = false;	// the start tone is over: the transmission goes on, the microphone live
+				return;
+			}
 			sm->view.roger = false;
 			fm_unkey(sm, false, now_ms);
 			return;
@@ -4135,9 +4140,32 @@ static void roger_cancel(radio_sm_t *sm)
 	if (sm->roger_ms != 0) {
 		tx_tone(0);
 		sm->roger_ms = 0;
+		sm->roger_lead = false;
 		sm->view.roger = false;
 		changed(sm);
 	}
+}
+#endif
+
+#if CONFIG_SIG_TONES && CONFIG_FM_TX_TONES
+// The start tone on air in FM (sigtone.h): right after keying, the chain goes out as tone on the carrier with
+// hal_radio_t.tx_tone, step by step as the roger beep does (roger_poll), and the microphone opens when it ends. Not on
+// a no-beep channel, with the host's audio, or on a board with no tx_tone
+static void fm_lead_start(radio_sm_t *sm, uint32_t now_ms)
+{
+	if (sm->host_audio || sm->view.ch.no_beep || board.radio->tx_tone == NULL ||
+	    !sig_out_air(sig_out(sm, SIG_EV_BEGIN), SIG_EV_BEGIN)) {
+		return;
+	}
+	beep_seg_t *g = sm->roger_seg;
+	uint8_t n = sig_chain(sm->set.sig_hz[SIG_EV_BEGIN], sm->set.sig_ms[SIG_EV_BEGIN], SIG_EV_BEGIN, g);
+	if (g[0].hz != 0 && !board.radio->tx_tone(g[0].hz)) {
+		return;
+	}
+	sm->roger_n = n;
+	sm->roger_i = 0;
+	sm->roger_ms = now_ms != 0 ? now_ms : 1;
+	sm->roger_lead = true;
 }
 #endif
 
@@ -4237,6 +4265,9 @@ static void ptt_down(radio_sm_t *sm, uint32_t now_ms)
 	if ((board.caps & CAP_BEEP_NOT_ON_AIR) == 0 && sig_local_on(sm, SIG_EV_BEGIN)) {
 		sig_local(sm, SIG_EV_BEGIN);
 	}
+#if CONFIG_FM_TX_TONES && CONFIG_SIG_TONES
+	fm_lead_start(sm, now_ms);	// and on air
+#endif
 	changed(sm);
 }
 
@@ -4273,6 +4304,7 @@ static void ptt_release(radio_sm_t *sm, bool roger, uint32_t now_ms)
 #endif
 	dtmf_cancel(sm, now_ms);	// before the roger beep: the board never mixes the two
 #if CONFIG_FM_TX_TONES
+	roger_cancel(sm);	// let go during the start tone on air: it ends here (the end tone is next)
 	sm->burst_timed = sm->burst_held = sm->burst_key_owned = false;
 	sm->burst_ms = sm->burst_end_ms = 0;
 	if (sm->view.tone_burst) {
@@ -4879,10 +4911,6 @@ static void clamp_settings(radio_settings_t *s)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		s->sig_dmr[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_dmr[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
 		s->sig_fm[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_fm[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
-		if (i == SIG_EV_BEGIN && (s->sig_fm[i] == SIG_OUT_AIR || s->sig_fm[i] == SIG_OUT_BOTH)) {
-			// An FM start tone on air isn't sent (the transmitter keys with the mic live): speaker only
-			s->sig_fm[i] = s->sig_fm[i] == SIG_OUT_BOTH ? SIG_OUT_LOCAL : SIG_OUT_OFF;
-		}
 		for (unsigned k = 0; k < SIG_STEPS; k++) {
 			if (s->sig_hz[i][k] > SIG_HZ_MAX) {
 				s->sig_hz[i][k] = SIG_HZ_MAX;
@@ -6495,6 +6523,7 @@ void radio_sm_poll(radio_sm_t *sm, uint32_t now_ms)
 			if (sm->roger_ms != 0 || sm->view.tone_burst) {
 				tx_tone(0);
 				sm->roger_ms = 0;
+				sm->roger_lead = false;
 				sm->view.roger = false;
 				sm->view.tone_burst = false;
 			}

@@ -409,8 +409,8 @@ test("signaling tone record: bytes, order and limits", () => {
 	// a short value reads with the missing fields zero; a longer one from the front
 	assert.deepEqual(getRecord([{ key: SIG_END.key, value: Uint8Array.of(3, 1) }], SIG_END), { dmr: 3, fm: 1, hz: [0, 0, 0, 0, 0], ms: [0, 0, 0, 0, 0] });
 	assert.deepEqual(getRecord([{ key: SIG_END.key, value: Uint8Array.from([...v, 9, 9]) }], SIG_END), rec());
-	// what the setting can't take reads as absent: no air copy of a reception's end, FM's start not on air, limits
-	assert.ok(recordValid(SIG_END, rec()) && !recordValid(SIG_IDLE, rec()) && !recordValid(SIG_BEGIN, rec({ dmr: 4, fm: 4 })));
+	// what the setting can't take reads as absent: no air copy of a reception's end, limits
+	assert.ok(recordValid(SIG_END, rec()) && !recordValid(SIG_IDLE, rec()) && recordValid(SIG_BEGIN, rec({ dmr: 4, fm: 4 })));
 	assert.ok(!recordValid(SIG_END, rec({ hz: [3401, 0, 0, 0, 0] })) && !recordValid(SIG_END, rec({ ms: [610, 0, 0, 0, 0] })) &&
 		!recordValid(SIG_END, rec({ ms: [15, 0, 0, 0, 0] })) && !recordValid(SIG_END, rec({ dmr: 5 })));
 	assert.equal(getRecord([{ key: SIG_END.key, value: recordValue(rec({ hz: [9000, 0, 0, 0, 0] })) }], SIG_END), null);

@@ -107,8 +107,9 @@ static void test_rec(void)
 	c[0] = SIG_OUT_AIR;	// the end of a reception has no air copy
 	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_IDLE, &d) && sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
 	memcpy(c, b, sizeof c);
-	c[1] = SIG_OUT_BOTH;	// FM's start tone is the speaker's only
-	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_BEGIN, &d) && sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	c[1] = SIG_OUT_BOTH;	// FM's start tone goes on air as its end tone does
+	CHECK(sig_rec_decode(c, SIG_REC_LEN, SIG_EV_BEGIN, &d) && sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_IDLE, &d));
 	memcpy(c, b, sizeof c);
 	c[3] = 0x20;	// 8192 Hz
 	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));

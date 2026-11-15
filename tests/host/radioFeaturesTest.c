@@ -3504,6 +3504,16 @@ static void set_sig_begin_local(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_LOCAL;
 }
+static void set_sig_begin_air(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_AIR;
+	sig_chain_put(s, SIG_EV_BEGIN, chirp_hz, chirp_ms, 3);
+}
+static void set_sig_begin_both(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;
+	sig_chain_put(s, SIG_EV_BEGIN, blip_hz, blip_ms, 1);
+}
 static void set_sig_idle_local(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_IDLE] = SIG_OUT_LOCAL;
@@ -3583,6 +3593,59 @@ static void test_sig_fm(void)
 	req(RREQ_PTT, 0);
 	run(300);
 	CHECK(sm.view.state == RS_IDLE && !sm.view.roger);
+
+	// The start tone on air: right after keying the three steps go out as tone, then the microphone is live (tone 0) and the
+	// transmission goes on; a release during it ends the transmission as usual
+	start();
+	settings(set_sig_begin_air);
+	hw.tone_calls = 0;
+	req(RREQ_PTT, 1);
+	run(5);
+	CHECK(sm.view.state == RS_TX && hw.tone_hz == 1000 && !sm.view.roger && sm.roger_lead);
+	run(50);
+	CHECK(hw.tone_hz == 1400);
+	run(50);
+	CHECK(hw.tone_hz == 1800);
+	run(30);
+	CHECK(hw.tone_hz == 0 && sm.view.state == RS_TX && hw.tx_off_calls == 0 && !sm.roger_lead);
+	run(300);
+	CHECK(sm.view.state == RS_TX && hw.tone_hz == 0);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.state == RS_IDLE && hw.tx_off_calls == 1);
+	// Released during the start tone: the tone stops and the transmission ends
+	start();
+	settings(set_sig_begin_air);
+	req(RREQ_PTT, 1);
+	run(30);
+	CHECK(hw.tone_hz != 0 && sm.roger_lead);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.state == RS_IDLE && hw.tone_hz == 0 && !sm.roger_lead && hw.tx_off_calls == 1);
+	// ... and the roger beep after a start tone still ends the transmission (the lead flag is not left set)
+	start();
+	settings(set_sig_end_both_roger);
+	settings(set_sig_begin_air);
+	req(RREQ_PTT, 1);
+	run(300);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.roger && !sm.roger_lead);
+	run(300);
+	CHECK(sm.view.state == RS_IDLE && hw.tone_hz == 0);
+	// Speaker + air: the speaker copy too; a no-beep channel has neither; a board without tx_tone sends none
+	start();
+	settings(set_sig_begin_both);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(100);
+	beep_get_stats(&b1);
+	CHECK(sm.view.state == RS_TX && b1.played == b0.played + 1 && hw.tone_calls > 0);
+	req(RREQ_PTT, 0);
+	start();
+	settings(set_sig_begin_air);
+	hw.has_tx_tone = false;
+	req(RREQ_PTT, 1);
+	run(200);
+	CHECK(sm.view.state == RS_TX && !sm.roger_lead);
+	req(RREQ_PTT, 0);
 
 	// The start of transmission tone on the speaker
 	start();

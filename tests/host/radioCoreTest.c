@@ -4002,7 +4002,7 @@ static void test_ui_glue(void)
 	sr.sig_dmr[SIG_EV_BEGIN] = SIG_OUT_BOTH;
 	sr.sig_dmr[SIG_EV_IDLE] = SIG_OUT_AIR;	// nothing to send when a reception ends
 	sr.sig_fm[SIG_EV_END] = SIG_OUT_AIR;
-	sr.sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;	// FM's start tone is the speaker's only
+	sr.sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;	// FM's start tone goes on air too
 	// The end chain's second step (1570 Hz, 40 ms) and its third (a length of 5000 ms, a frequency of 9000 Hz: both cut)
 	sr.sig_hz[SIG_EV_END][1] = 1570;
 	sr.sig_ms[SIG_EV_END][1] = 4;
@@ -4011,7 +4011,7 @@ static void test_ui_glue(void)
 	radio_set_settings(&sr);
 	run(20);
 	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT &&
-	      sm.set.sig_fm[SIG_EV_END] == SIG_OUT_AIR && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_LOCAL &&
+	      sm.set.sig_fm[SIG_EV_END] == SIG_OUT_AIR && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_BOTH &&
 	      sm.set.sig_hz[SIG_EV_END][1] == 1570 && sm.set.sig_ms[SIG_EV_END][1] == 4 &&
 	      sm.set.sig_hz[SIG_EV_END][2] == SIG_HZ_MAX && sm.set.sig_ms[SIG_EV_END][2] == SIG_MAX_MS / SIG_MS_UNIT &&
 	      sm.set.sig_ms[SIG_EV_IDLE][0] == 0);
@@ -4047,7 +4047,7 @@ static void test_ui_glue(void)
 	CHECK(kv_sig[SIG_EV_END][0] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH &&
 	      sv.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH && sv.sig_hz[SIG_EV_END][1] == 1570);
 	// What the setting can't take is refused, with no job
-	CHECK(!ui_svc_setting_set(UI_SET_SIG_FM + SIG_EV_BEGIN, SIG_OUT_AIR) && !ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_BOTH) &&
+	CHECK(!ui_svc_setting_set(UI_SET_SIG_FM + SIG_EV_IDLE, SIG_OUT_AIR) && !ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_BOTH) &&
 	      !ui_svc_setting_set(UI_SET_SIG_STEP, UI_SIG_STEP(SIG_EV_END, 7, 800, 40)) && !ui_svc_setting_set(UI_SET_SIG_HZ, 9000) &&
 	      !storage_job_busy());
 	// A record a CPS wrote holds over the radio's own copy, which follows it: a short one (the outputs only) leaves the

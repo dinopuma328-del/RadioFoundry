@@ -231,7 +231,12 @@ typedef struct {
 	// none (was reserved9[0..1]: an older record reads none). The VFO's outbound color code is its own (no byte B)
 	uint8_t vfo_sfr;		// the first VFO
 	uint8_t vfo2_sfr;		// the second
-	uint8_t reserved9;
+	// Signaling tones (core/radio/sigtone.h; was reserved9): per event (start of a transmission, its end, a reception's
+	// end) where it sounds in DMR and in FM (sig_out_t) and which sound (sig_snd_t). 0 = the default, as an older
+	// record reads
+	uint8_t sig_dmr[3];
+	uint8_t sig_fm[3];
+	uint8_t sig_snd[3];
 } settings_t;
 
 // Pages: settings_t is stored as records of SETTINGS_PAGE_BYTES each (settings-store.md 2.1). Only the pages its size

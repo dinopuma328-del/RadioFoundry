@@ -3451,6 +3451,282 @@ static void set_no_permit(radio_settings_t *s) { s->talk_permit = false; }
 
 // A board whose beeps can't sound on air (CAP_BEEP_NOT_ON_AIR): the short talk permit plays in a hold before keying,
 // while the radio still receives, and none plays once on air. With the permit off it keys at once
+// Signaling tones on an FM channel (sigtone.h): the end of transmission tone on air as a sequence (replacing the roger
+// beep), off (no roger beep even when it is on), speaker only (no tone on air, a beep after the unkey), the start of
+// transmission tone on the speaker, and the idle tone when the squelch closes
+static void set_sig_end_air_call5(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_END] = SIG_OUT_AIR;
+	s->sig_snd[SIG_EV_END] = SIG_SND_CALL5;
+}
+static void set_sig_end_off_roger(radio_settings_t *s)
+{
+	s->roger_beep = true;
+	s->sig_fm[SIG_EV_END] = SIG_OUT_OFF;
+}
+static void set_sig_end_local(radio_settings_t *s)
+{
+	s->roger_beep = true;
+	s->sig_fm[SIG_EV_END] = SIG_OUT_LOCAL;
+	s->sig_snd[SIG_EV_END] = SIG_SND_BLIP;
+}
+static void set_sig_end_both_roger(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_END] = SIG_OUT_BOTH;
+	s->sig_snd[SIG_EV_END] = SIG_SND_ROGER;
+}
+static void set_sig_begin_local(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_LOCAL;
+}
+static void set_sig_idle_local(radio_settings_t *s)
+{
+	s->sig_fm[SIG_EV_IDLE] = SIG_OUT_LOCAL;
+	s->sig_snd[SIG_EV_IDLE] = SIG_SND_IDLE1;
+}
+
+static void test_sig_fm(void)
+{
+	beep_stats_t b0, b1;
+
+	// On air, five steps of 40 ms (the first silent): the tone log has the steps with a tone, in order, and the
+	// carrier drops after the last one (200 ms)
+	start();
+	settings(set_sig_end_air_call5);
+	req(RREQ_PTT, 1);
+	run(500);
+	hw.tone_calls = 0;
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.state == RS_TX && sm.view.roger && hw.tx_off_calls == 0);
+	// A step starts at the first poll (25 ms) after its time, so each is sampled 30 ms into its own
+	run(30);
+	CHECK(hw.tone_hz == 0 && sm.view.state == RS_TX);		// the silent first step
+	run(40);
+	CHECK(hw.tone_hz == 1570);
+	run(40);
+	CHECK(hw.tone_hz == 1050);
+	run(40);
+	CHECK(hw.tone_hz == 1570);
+	run(40);
+	CHECK(hw.tone_hz == 1320 && sm.view.state == RS_TX);
+	run(60);
+	CHECK(sm.view.state == RS_IDLE && !sm.view.roger && hw.tone_hz == 0 && hw.tx_off_calls == 1);
+
+	// The roger preset on air is the roger beep (the same pitches and lengths), roger_beep off or on
+	start();
+	settings(set_sig_end_both_roger);
+	req(RREQ_PTT, 1);
+	run(200);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.roger && hw.tone_hz == 1200);
+	run(110);
+	CHECK(hw.tone_hz == 900 && sm.view.state == RS_TX);
+	run(100);
+	CHECK(sm.view.state == RS_IDLE && hw.tone_hz == 0);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played + 1);		// and the speaker copy once the transmitter is off
+
+	// Off: no roger beep although it is on
+	start();
+	settings(set_sig_end_off_roger);
+	req(RREQ_PTT, 1);
+	run(200);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.state == RS_IDLE && !sm.view.roger && hw.tone_calls == 0);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played);
+
+	// Speaker only: no roger beep on air, a beep after the unkey
+	start();
+	settings(set_sig_end_local);
+	req(RREQ_PTT, 1);
+	run(200);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 0);
+	CHECK(sm.view.state == RS_IDLE && !sm.view.roger && hw.tone_calls == 0);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played + 1);
+
+	// A board without tx_tone: no tone on air, and the transmission still ends
+	start();
+	settings(set_sig_end_air_call5);
+	hw.has_tx_tone = false;
+	req(RREQ_PTT, 1);
+	run(200);
+	req(RREQ_PTT, 0);
+	run(300);
+	CHECK(sm.view.state == RS_IDLE && !sm.view.roger);
+
+	// The start of transmission tone on the speaker
+	start();
+	settings(set_sig_begin_local);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(50);
+	beep_get_stats(&b1);
+	CHECK(sm.view.state == RS_TX && b1.played == b0.played + 1);
+	req(RREQ_PTT, 0);
+	run(100);
+	// ... not on a board whose beeps can't sound on air
+	uint32_t caps = board.caps;
+	board.caps |= CAP_BEEP_NOT_ON_AIR;
+	start();
+	settings(set_sig_begin_local);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(50);
+	beep_get_stats(&b1);
+	CHECK(sm.view.state == RS_TX && b1.played == b0.played);
+	req(RREQ_PTT, 0);
+	run(100);
+	board.caps = caps;
+	// ... and not on a no-beep channel
+	start();
+	settings(set_sig_begin_local);
+	chans[1].no_beep = true;
+	req(RREQ_ZONE_POS, 0);
+	run(50);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(50);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played);
+	req(RREQ_PTT, 0);
+	run(100);
+	chans[1].no_beep = false;
+
+	// The idle tone: the squelch closes after a reception
+	start();
+	settings(set_sig_idle_local);
+	req(RREQ_ZONE_POS, 0);
+	run(50);
+	signal_on(0, 146520000, 30, no_tone);
+	run(300);
+	CHECK(sm.view.state == RS_RX);
+	beep_get_stats(&b0);
+	signal_on(0, 0, 0, no_tone);
+	run(600);
+	beep_get_stats(&b1);
+	CHECK(sm.view.state == RS_IDLE && b1.played == b0.played + 1);
+	// by default none
+	start();
+	req(RREQ_ZONE_POS, 0);
+	run(50);
+	signal_on(0, 146520000, 30, no_tone);
+	run(300);
+	beep_get_stats(&b0);
+	signal_on(0, 0, 0, no_tone);
+	run(600);
+	beep_get_stats(&b1);
+	CHECK(sm.view.state == RS_IDLE && b1.played == b0.played);
+}
+
+// Signaling tones on a DMR channel (sigtone.h), speaker side: the start tone replaces the talk permit (off: none; the
+// speaker setting: its sequence), the end tone sounds once the transmission is over, the idle tone replaces the call
+// end beep
+static void set_sig_dmr_begin_off(radio_settings_t *s) { s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_OFF; }
+static void set_sig_dmr_begin_local(radio_settings_t *s)
+{
+	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_LOCAL;
+	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_CHIRP;
+}
+static void set_sig_dmr_begin_air(radio_settings_t *s) { s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_AIR; }
+static void set_sig_dmr_end_local(radio_settings_t *s) { s->sig_dmr[SIG_EV_END] = SIG_OUT_LOCAL; }
+static void set_sig_dmr_idle_off(radio_settings_t *s) { s->sig_dmr[SIG_EV_IDLE] = SIG_OUT_OFF; }
+static void set_sig_dmr_idle_local(radio_settings_t *s)
+{
+	s->sig_dmr[SIG_EV_IDLE] = SIG_OUT_LOCAL;
+	s->sig_snd[SIG_EV_IDLE] = SIG_SND_IDLE1;
+}
+
+// PTT on and off on the DMR channel: the beeps played from the press to the end of the transmission
+static uint32_t dmr_tx_beeps(void)
+{
+	beep_stats_t b0, b1;
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(600);
+	req(RREQ_PTT, 0);
+	run(1500);
+	beep_get_stats(&b1);
+	return b1.played - b0.played;
+}
+
+static void test_sig_dmr(void)
+{
+	// The default: the talk permit
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	CHECK(dmr_tx_beeps() == 1);
+	// Off: none, although the talk permit is on
+	settings(set_sig_dmr_begin_off);
+	CHECK(dmr_tx_beeps() == 0);
+	// On the speaker: the one tone of the sequence in the talk permit's place
+	settings(set_sig_dmr_begin_local);
+	CHECK(dmr_tx_beeps() == 1);
+	// On air only: not on the speaker
+	settings(set_sig_dmr_begin_air);
+	CHECK(dmr_tx_beeps() == 0);
+	// The end tone on the speaker (the permit is the default again): the permit and the end tone
+	settings(set_sig_dmr_begin_off);
+	settings(set_sig_dmr_end_local);
+	CHECK(dmr_tx_beeps() == 1);
+
+	// The call end beep after a call heard: replaced by the idle tone, or silenced
+	beep_stats_t b0, b1;
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	beep_get_stats(&b0);
+	hear_call(9, 1, 1, true);
+	run(300);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played + 1);	// the call end beep
+	settings(set_sig_dmr_idle_off);
+	beep_get_stats(&b0);
+	hear_call(9, 1, 1, true);
+	run(300);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played);
+	settings(set_sig_dmr_idle_local);
+	beep_get_stats(&b0);
+	hear_call(9, 1, 1, true);
+	run(300);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played + 1);
+
+	// Before keying on a board whose beeps can't sound on air: the start tone plays in the hold (the stack waits for
+	// it), and with it off nothing holds
+	uint32_t caps = board.caps;
+	board.caps |= CAP_BEEP_NOT_ON_AIR;
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_begin_local);
+	beep_get_stats(&b0);
+	unsigned begins = sim.tx_begins;
+	req(RREQ_PTT, 1);
+	run(10);
+	beep_get_stats(&b1);
+	CHECK(sm.view.dmr.state == RDMR_TX_PERMIT && sim.tx_begins == begins && b1.played == b0.played + 1);
+	run(700);
+	CHECK(sm.view.dmr.state == RDMR_TX && sim.tx_begins == begins + 1);
+	req(RREQ_PTT, 0);
+	run(1000);
+	settings(set_sig_dmr_begin_off);
+	run(50);
+	begins = sim.tx_begins;
+	req(RREQ_PTT, 1);
+	run(10);
+	CHECK(sm.view.dmr.state != RDMR_TX_PERMIT && sim.tx_begins == begins + 1);
+	req(RREQ_PTT, 0);
+	run(1000);
+	board.caps = caps;
+}
+
 static void test_dmr_permit_before_key(void)
 {
 	beep_stats_t b0, b1;
@@ -3863,6 +4139,8 @@ int main(void)
 	test_battery_save();
 	test_dmr_beeps();
 	test_dmr_permit_before_key();
+	test_sig_fm();
+	test_sig_dmr();
 	test_tone_keys();
 	test_dmr_short_press_wake();
 	test_vibrate();

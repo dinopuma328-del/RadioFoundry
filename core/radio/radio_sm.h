@@ -12,6 +12,8 @@
 #include "radio/battery.h"
 #include "radio/morse.h"
 #include "radio/radio_cwid.h"
+#include "radio/beep.h"	// beep_seg_t
+#include "radio/sigtone.h"	// SIG_STEPS
 #if CONFIG_APRS
 #include "aprs/aprs.h"
 #endif
@@ -332,7 +334,9 @@ typedef struct {
 	uint32_t burst_ms;		// start of the side-key burst
 	bool burst_keyed;		// the 1750 Hz burst keyed the transmitter (not PTT)
 	uint32_t burst_end_ms;		// the burst ends by itself at this time (RREQ_TONE_BURST arg2), 0 = no limit
-	uint32_t roger_ms;		// roger beep start, 0 = none
+	uint32_t roger_ms;		// start of the roger beep's current step (the end tone's, sigtone.h), 0 = none
+	uint8_t roger_n, roger_i;	// its steps and the one sounding
+	beep_seg_t roger_seg[SIG_STEPS];
 #endif
 #if CONFIG_DTMF
 	bool dtmf_held;			// the key of the digit sounding (view.dtmf) is still down

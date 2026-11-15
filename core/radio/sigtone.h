@@ -68,6 +68,21 @@ uint8_t sig_chain(const uint16_t hz[SIG_STEPS], const uint8_t ms10[SIG_STEPS], s
 bool sig_chain_set(const uint8_t ms10[SIG_STEPS]);
 uint32_t sig_total_ms(const beep_seg_t *s, uint8_t n);
 
+// The settings area's record of one event (docs/spec/codeplug-settings.md 3): the outputs and the chain, the fields in
+// this order. A record shorter than SIG_REC_LEN reads with the missing fields zero (Default, no step); a longer one
+// (a later version) is read from the front
+#define SIG_REC_LEN	(2u + 2u * SIG_STEPS + SIG_STEPS)
+typedef struct {
+	uint8_t dmr, fm;			// sig_out_t
+	uint16_t hz[SIG_STEPS];
+	uint8_t ms10[SIG_STEPS];		// in SIG_MS_UNIT
+} sig_rec_t;
+// A value as read (len bytes, v holds at most SIG_REC_LEN of them) as the event's record: false when the setting
+// can't take it (an output the event doesn't have, a frequency or a total length over the limits), which reads as an
+// absent key. Nothing is clamped
+bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r);
+void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN]);
+
 // Sample generator (8 kHz mono, phase continuous across steps, 2 ms fades at each step's edges)
 typedef struct {
 	beep_seg_t seg[SIG_STEPS];

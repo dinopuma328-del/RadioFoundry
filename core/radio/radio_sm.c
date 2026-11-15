@@ -250,12 +250,45 @@ static bool tones_apply(radio_settings_t *s)
 	return true;
 }
 
+#if CONFIG_SIG_TONES
+// The signaling tones' records over s->sig_*, the radio's own copy: one walk over their keys. A record the setting can't
+// take reads as absent (sig_rec_decode). True if one changed
+static bool sig_apply(radio_settings_t *s)
+{
+	bool changed = false;
+	codeplug_kv_cursor_t c;
+	uint16_t key;
+	uint8_t v[SIG_REC_LEN];
+	int len;
+	codeplug_kv_begin(&c, CODEPLUG_KEY_SIG_BEGIN, CODEPLUG_KEY_SIG_BEGIN + SIG_EV_COUNT - 1);
+	while ((len = codeplug_kv_next(&c, &key, v, sizeof(v))) >= 0) {
+		sig_event_t ev = (sig_event_t)(key - CODEPLUG_KEY_SIG_BEGIN);
+		sig_rec_t r, now;
+		uint8_t a[SIG_REC_LEN], b[SIG_REC_LEN];
+		radio_sig_get(s, ev, &now);
+		if (sig_rec_decode(v, len, ev, &r)) {
+			sig_rec_encode(&r, a);	// compared as stored: the struct has padding
+			sig_rec_encode(&now, b);
+			if (memcmp(a, b, sizeof a) != 0) {
+				radio_sig_put(s, ev, &r);
+				changed = true;
+			}
+		}
+	}
+	return changed;
+}
+#endif
+
 static void radio_to_settings(const radio_settings_t *s, uint32_t now_ms);
 
 static void kv_load(radio_sm_t *sm, uint32_t now_ms)
 {
 	kv_seen = codeplug_kv_serial();
-	if (tones_apply(&sm->set)) {
+	bool sig = false;
+#if CONFIG_SIG_TONES
+	sig = sig_apply(&sm->set);
+#endif
+	if (tones_apply(&sm->set) || sig) {
 		changed(sm);	// published with the settings (radio_get_settings): the menu shows it
 		radio_to_settings(&sm->set, now_ms);	// the radio's own copy follows the key
 	}

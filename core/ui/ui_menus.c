@@ -6143,8 +6143,7 @@ static void sc_select(uint16_t i, bool hold)
 			sc_val = 40;
 		return;
 	}
-	sc_store((uint8_t)(UI_SET_SIG_HZ + SIG_STEPS * ev + i), sc_hz);
-	sc_store((uint8_t)(UI_SET_SIG_MS + SIG_STEPS * ev + i), sc_val);
+	sc_store(UI_SET_SIG_STEP, UI_SIG_STEP(ev, i, (uint32_t)sc_hz, (uint32_t)sc_val));	// one write of the record
 	sc_row = SIG_STEPS;
 }
 

@@ -276,9 +276,21 @@ static uint8_t kv_serial;
 static uint32_t kv_ars;
 static int16_t kv_tone[CODEPLUG_KEY_TX_DENY_TONE - CODEPLUG_KEY_CALL_END_TONE + 1] = { -1, -1, -1, -1 };
 static bool kv_held;	// a CPS session holds the flash, or another firmware's codeplug: no key can be written
+// The signaling tones' records (sigtone.h): one per event, kv_sig_len -1 when the key is absent
+static int16_t kv_sig_len[SIG_EV_COUNT] = { -1, -1, -1 };
+static uint8_t kv_sig[SIG_EV_COUNT][SIG_REC_LEN];
+static bool kv_is_sig(uint16_t key) { return key >= CODEPLUG_KEY_SIG_BEGIN && key <= CODEPLUG_KEY_SIG_IDLE; }
 static bool kv_is_tone(uint16_t key) { return key >= CODEPLUG_KEY_CALL_END_TONE && key <= CODEPLUG_KEY_TX_DENY_TONE; }
 int codeplug_kv_get(uint16_t key, void *buf, uint16_t max)
 {
+	if (kv_is_sig(key)) {
+		int e = key - CODEPLUG_KEY_SIG_BEGIN;
+		if (kv_sig_len[e] < 0) {
+			return -1;
+		}
+		memcpy(buf, kv_sig[e], max < (uint16_t)kv_sig_len[e] ? max : (uint16_t)kv_sig_len[e]);
+		return kv_sig_len[e];
+	}
 	if (kv_is_tone(key)) {
 		if (kv_tone[key - CODEPLUG_KEY_CALL_END_TONE] < 0) {
 			return -1;
@@ -297,6 +309,24 @@ int codeplug_kv_get(uint16_t key, void *buf, uint16_t max)
 // One set: the ARS server as a u32, a tone as one byte
 static bool kv_set(uint16_t key, const uint8_t *v, uint16_t len)
 {
+	if (kv_is_sig(key)) {
+		// A record is set from the front (CODEPLUG_KV_HEAD): the bytes after it stay
+		int e = key - CODEPLUG_KEY_SIG_BEGIN;
+		bool head = (len & CODEPLUG_KV_HEAD) != 0;
+		len &= (uint16_t)~CODEPLUG_KV_HEAD;
+		if (len > SIG_REC_LEN) {
+			return false;
+		}
+		if (!head || kv_sig_len[e] < 0) {
+			memset(kv_sig[e], 0, SIG_REC_LEN);
+			kv_sig_len[e] = (int16_t)len;
+		} else if (len > kv_sig_len[e]) {
+			kv_sig_len[e] = (int16_t)len;
+		}
+		memcpy(kv_sig[e], v, len);
+		kv_serial++;
+		return true;
+	}
 	if (kv_is_tone(key) && len == 1) {
 		kv_tone[key - CODEPLUG_KEY_CALL_END_TONE] = v[0];
 	} else if (key == CODEPLUG_KEY_ARS_SERVER && len == 4) {
@@ -318,7 +348,7 @@ void codeplug_kv_begin(codeplug_kv_cursor_t *c, uint16_t lo, uint16_t hi)
 }
 int codeplug_kv_next(codeplug_kv_cursor_t *c, uint16_t *key, void *buf, uint16_t max)
 {
-	for (; !c->done && c->at <= c->hi && c->at <= CODEPLUG_KEY_TX_DENY_TONE; c->at++) {
+	for (; !c->done && c->at <= c->hi && c->at <= CODEPLUG_KEY_SIG_IDLE; c->at++) {
 		int n = codeplug_kv_get(c->at, buf, max);
 		if (n >= 0) {
 			*key = c->at++;
@@ -3967,15 +3997,18 @@ static void test_ui_glue(void)
 		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_HZ + 5 * ev)) == 0 &&
 		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_MS + 5 * ev)) == 0);
 	}
-	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_BEGIN, SIG_OUT_BOTH);
-	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_AIR);	// nothing to send when a reception ends
-	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_END, SIG_OUT_AIR);
-	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_BEGIN, SIG_OUT_BOTH);	// FM's start tone is the speaker's only
+	radio_settings_t sr;
+	radio_get_settings(&sr);
+	sr.sig_dmr[SIG_EV_BEGIN] = SIG_OUT_BOTH;
+	sr.sig_dmr[SIG_EV_IDLE] = SIG_OUT_AIR;	// nothing to send when a reception ends
+	sr.sig_fm[SIG_EV_END] = SIG_OUT_AIR;
+	sr.sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;	// FM's start tone is the speaker's only
 	// The end chain's second step (1570 Hz, 40 ms) and its third (a length of 5000 ms, a frequency of 9000 Hz: both cut)
-	ui_svc_apply(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1, 1570);
-	ui_svc_apply(UI_SET_SIG_MS + 5 * SIG_EV_END + 1, 40);
-	ui_svc_apply(UI_SET_SIG_HZ + 5 * SIG_EV_END + 2, 9000);
-	ui_svc_apply(UI_SET_SIG_MS + 5 * SIG_EV_END + 2, 5000);
+	sr.sig_hz[SIG_EV_END][1] = 1570;
+	sr.sig_ms[SIG_EV_END][1] = 4;
+	sr.sig_hz[SIG_EV_END][2] = 9000;
+	sr.sig_ms[SIG_EV_END][2] = 250;
+	radio_set_settings(&sr);
 	run(20);
 	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT &&
 	      sm.set.sig_fm[SIG_EV_END] == SIG_OUT_AIR && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_LOCAL &&
@@ -3989,16 +4022,93 @@ static void test_ui_glue(void)
 	settings_read(&sv);
 	CHECK(sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sv.sig_fm[SIG_EV_END] == SIG_OUT_AIR &&
 	      sv.sig_hz[SIG_EV_END][1] == 1570 && sv.sig_ms[SIG_EV_END][1] == 4 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
-	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
-		ui_svc_apply((uint8_t)(UI_SET_SIG_DMR + ev), SIG_OUT_DEFAULT);
-		ui_svc_apply((uint8_t)(UI_SET_SIG_FM + ev), SIG_OUT_DEFAULT);
-	}
-	for (int k = 0; k < 15; k++) {
-		ui_svc_apply((uint8_t)(UI_SET_SIG_HZ + k), 0);
-		ui_svc_apply((uint8_t)(UI_SET_SIG_MS + k), 0);
-	}
+	memset(sr.sig_dmr, 0, sizeof sr.sig_dmr);
+	memset(sr.sig_fm, 0, sizeof sr.sig_fm);
+	memset(sr.sig_hz, 0, sizeof sr.sig_hz);
+	memset(sr.sig_ms, 0, sizeof sr.sig_ms);
+	radio_set_settings(&sr);
 	run(20);
 	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_DEFAULT && sm.set.sig_ms[SIG_EV_END][1] == 0);
+	// Set from the menu (docs/spec/codeplug-settings.md 5.2): a job writes the event's record, 17 bytes with the
+	// outputs first, and the radio core takes the change as the radio's own; a step goes whole
+	n_ev = 0;
+	CHECK(ui_svc_setting_set(UI_SET_SIG_STEP, UI_SIG_STEP(SIG_EV_END, 1, 1570, 40)) && storage_job_busy());
+	storage_job_poll();
+	run(20);
+	CHECK(kv_sig_len[SIG_EV_END] == SIG_REC_LEN && kv_sig[SIG_EV_END][2 + 2] == (1570 & 0xFF) &&
+	      kv_sig[SIG_EV_END][3 + 2] == (1570 >> 8) && kv_sig[SIG_EV_END][2 + 2 * SIG_STEPS + 1] == 4);
+	CHECK(kv_sig_len[SIG_EV_BEGIN] < 0 && sm.set.sig_hz[SIG_EV_END][1] == 1570 && sm.set.sig_ms[SIG_EV_END][1] == 4 &&
+	      ui_svc_setting_get(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1) == 1570 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 1) == 40);
+	CHECK(ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_END, SIG_OUT_BOTH));
+	storage_job_poll();
+	run(20);
+	settings_read(&sv);
+	CHECK(kv_sig[SIG_EV_END][0] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH &&
+	      sv.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH && sv.sig_hz[SIG_EV_END][1] == 1570);
+	// What the setting can't take is refused, with no job
+	CHECK(!ui_svc_setting_set(UI_SET_SIG_FM + SIG_EV_BEGIN, SIG_OUT_AIR) && !ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_BOTH) &&
+	      !ui_svc_setting_set(UI_SET_SIG_STEP, UI_SIG_STEP(SIG_EV_END, 7, 800, 40)) && !ui_svc_setting_set(UI_SET_SIG_HZ, 9000) &&
+	      !storage_job_busy());
+	// A record a CPS wrote holds over the radio's own copy, which follows it: a short one (the outputs only) leaves the
+	// chain empty, a longer one (a later version) is read from the front, and one the setting can't take is ignored
+	kv_sig_len[SIG_EV_BEGIN] = 2;
+	kv_sig[SIG_EV_BEGIN][0] = SIG_OUT_LOCAL;
+	kv_sig[SIG_EV_BEGIN][1] = SIG_OUT_OFF;
+	kv_serial++;
+	run(20);
+	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_LOCAL && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_OFF &&
+	      sm.set.sig_ms[SIG_EV_BEGIN][0] == 0);
+	settings_read(&sv);
+	CHECK(sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_LOCAL);
+	kv_sig_len[SIG_EV_IDLE] = SIG_REC_LEN;
+	memset(kv_sig[SIG_EV_IDLE], 0, SIG_REC_LEN);
+	kv_sig[SIG_EV_IDLE][0] = SIG_OUT_LOCAL;
+	kv_sig[SIG_EV_IDLE][2] = 800 & 0xFF;
+	kv_sig[SIG_EV_IDLE][3] = 800 >> 8;
+	kv_sig[SIG_EV_IDLE][2 + 2 * SIG_STEPS] = 6;
+	kv_serial++;
+	run(20);
+	CHECK(sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_LOCAL && sm.set.sig_hz[SIG_EV_IDLE][0] == 800 && sm.set.sig_ms[SIG_EV_IDLE][0] == 6);
+	kv_sig[SIG_EV_END][2] = 9000 & 0xFF;	// a frequency over the limit: the record reads as absent
+	kv_sig[SIG_EV_END][3] = 9000 >> 8;
+	kv_serial++;
+	run(20);
+	CHECK(sm.set.sig_hz[SIG_EV_END][0] == 0 && sm.set.sig_hz[SIG_EV_END][1] == 1570);
+	// With another firmware's codeplug the area can't be written and holds no key: saved as the radio's own
+	kv_sig_len[SIG_EV_BEGIN] = kv_sig_len[SIG_EV_END] = kv_sig_len[SIG_EV_IDLE] = -1;
+	cp_foreign = true;
+	kv_held = true;
+	n_ev = 0;
+	CHECK(ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_BEGIN, SIG_OUT_AIR));
+	storage_job_poll();
+	run(20);
+	settings_read(&sv);
+	CHECK(n_ev == 0 && kv_sig_len[SIG_EV_BEGIN] < 0 && sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_AIR &&
+	      sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_AIR);
+	cp_foreign = false;
+	// A key that is present and can't be updated (a CPS session holds the flash) refuses the change
+	kv_sig_len[SIG_EV_BEGIN] = 2;
+	kv_sig[SIG_EV_BEGIN][0] = SIG_OUT_AIR;
+	kv_sig[SIG_EV_BEGIN][1] = 0;
+	CHECK(ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_BEGIN, SIG_OUT_OFF));
+	storage_job_poll();
+	run(20);
+	CHECK(n_ev == 1 && last_ev.kind == UI_EV_SAVE_FAILED && kv_sig[SIG_EV_BEGIN][0] == SIG_OUT_AIR &&
+	      sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_AIR);
+	kv_held = false;
+	kv_sig_len[SIG_EV_BEGIN] = -1;
+	n_ev = 0;
+	memset(sr.sig_dmr, 0, sizeof sr.sig_dmr);
+	memset(sr.sig_hz, 0, sizeof sr.sig_hz);
+	memset(sr.sig_ms, 0, sizeof sr.sig_ms);
+	radio_get_settings(&sr);
+	memset(sr.sig_dmr, 0, sizeof sr.sig_dmr);
+	memset(sr.sig_fm, 0, sizeof sr.sig_fm);
+	memset(sr.sig_hz, 0, sizeof sr.sig_hz);
+	memset(sr.sig_ms, 0, sizeof sr.sig_ms);
+	radio_set_settings(&sr);
+	run(20);
 	// Settings > Sound tones. The four keyed ones (docs/spec/codeplug-settings.md 5.2): on while absent; a set writes
 	// a one-byte bool key with no codeplug reload, and the radio core saves the tone as the radio's own
 	static const uint8_t tone_ids[] = { UI_SET_CALL_END_TONE, UI_SET_TOT_WARN_TONE, UI_SET_BATTERY_TONE,

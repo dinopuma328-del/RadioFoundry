@@ -14,6 +14,43 @@
 static const beep_seg_t s_permit[] = { { 1600, 50 }, { 0, 40 }, { 1600, 50 } };
 static const beep_seg_t s_end[] = { { 1200, 50 }, { 0, 30 }, { 900, 70 } };
 
+// The outputs a record may hold: what the menu offers (an FM start tone is not sent on air, an end of reception has no
+// air copy), so a value the radio would change reads as absent instead
+static bool rec_out_ok(uint8_t out, sig_event_t ev, bool fm)
+{
+	return out == sig_out_clean(out, ev) && !(fm && ev == SIG_EV_BEGIN && sig_out_air(out, ev));
+}
+
+bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r)
+{
+	uint8_t b[SIG_REC_LEN] = { 0 };
+	if (len < 1) {
+		return false;
+	}
+	memcpy(b, v, (unsigned)len < SIG_REC_LEN ? (unsigned)len : SIG_REC_LEN);
+	r->dmr = b[0];
+	r->fm = b[1];
+	for (unsigned i = 0; i < SIG_STEPS; i++) {
+		r->hz[i] = (uint16_t)(b[2 + 2 * i] | b[3 + 2 * i] << 8);
+		r->ms10[i] = b[2 + 2 * SIG_STEPS + i];
+		if (r->hz[i] > SIG_HZ_MAX || r->ms10[i] > SIG_MAX_MS / SIG_MS_UNIT) {
+			return false;
+		}
+	}
+	return rec_out_ok(r->dmr, ev, false) && rec_out_ok(r->fm, ev, true);
+}
+
+void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN])
+{
+	out[0] = r->dmr;
+	out[1] = r->fm;
+	for (unsigned i = 0; i < SIG_STEPS; i++) {
+		out[2 + 2 * i] = (uint8_t)(r->hz[i] & 0xFFu);
+		out[3 + 2 * i] = (uint8_t)(r->hz[i] >> 8);
+		out[2 + 2 * SIG_STEPS + i] = r->ms10[i];
+	}
+}
+
 uint32_t sig_total_ms(const beep_seg_t *s, uint8_t n)
 {
 	uint32_t t = 0;

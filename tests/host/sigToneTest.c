@@ -84,6 +84,39 @@ static int crossings(const int16_t *p, int n)
 	return c;
 }
 
+// The settings area's record (docs/spec/codeplug-settings.md 3): outputs first, then five frequencies (u16 little endian)
+// and five lengths. Short reads zero-filled, long from the front, what the setting can't take reads as absent
+static void test_rec(void)
+{
+	sig_rec_t r = { SIG_OUT_BOTH, SIG_OUT_LOCAL, { 1600, 0, 800, 3400, 1 }, { 5, 0, 7, 60, 1 } }, d;
+	uint8_t b[SIG_REC_LEN + 4] = { 0 };
+	CHECK(SIG_REC_LEN == 17);
+	sig_rec_encode(&r, b);
+	CHECK(b[0] == SIG_OUT_BOTH && b[1] == SIG_OUT_LOCAL && b[2] == (1600 & 0xFF) && b[3] == (1600 >> 8) &&
+	      b[2 + 4] == (800 & 0xFF) && b[2 + 10] == 5 && b[2 + 10 + 3] == 60);
+	CHECK(sig_rec_decode(b, SIG_REC_LEN, SIG_EV_END, &d) && d.dmr == SIG_OUT_BOTH && d.fm == SIG_OUT_LOCAL &&
+	      d.hz[0] == 1600 && d.hz[3] == 3400 && d.ms10[2] == 7 && d.ms10[3] == 60);
+	CHECK(sig_rec_decode(b, SIG_REC_LEN + 4, SIG_EV_END, &d) && d.hz[4] == 1);	// a later version's longer record
+	CHECK(sig_rec_decode(b, 2, SIG_EV_END, &d) && d.dmr == SIG_OUT_BOTH && d.hz[0] == 0 && d.ms10[0] == 0);	// short
+	CHECK(!sig_rec_decode(b, 0, SIG_EV_END, &d));
+	uint8_t c[SIG_REC_LEN];
+	memcpy(c, b, sizeof c);
+	c[0] = SIG_OUT_COUNT;
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	memcpy(c, b, sizeof c);
+	c[0] = SIG_OUT_AIR;	// the end of a reception has no air copy
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_IDLE, &d) && sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	memcpy(c, b, sizeof c);
+	c[1] = SIG_OUT_BOTH;	// FM's start tone is the speaker's only
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_BEGIN, &d) && sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	memcpy(c, b, sizeof c);
+	c[3] = 0x20;	// 8192 Hz
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	memcpy(c, b, sizeof c);
+	c[2 + 10 + 1] = 61;	// a length over the limit
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+}
+
 static void test_gen(void)
 {
 	static int16_t pcm[8000];
@@ -140,6 +173,7 @@ int main(void)
 {
 	test_out();
 	test_chain();
+	test_rec();
 	test_gen();
 	printf("%d checks, %d failed\n", checks, failures);
 	return failures != 0;

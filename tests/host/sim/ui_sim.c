@@ -665,6 +665,14 @@ bool ui_svc_setting_set(uint8_t id, int32_t value)
 {
 	if (id < UI_SET_RAM_COUNT || id >= UI_SET_COUNT)
 		return ui_svc_ram_set(id, value);
+	if (id == UI_SET_SIG_STEP) {	// a whole step: the firmware writes one record, here its two settings
+		uint32_t ev = (uint32_t)value >> 21 & 3u, k = (uint32_t)value >> 18 & 7u;
+		if (ev >= 3 || k >= 5)
+			return false;
+		sim_late[UI_SET_SIG_HZ + 5 * ev + k - UI_SET_RAM_COUNT] = value & 0xFFF;
+		sim_late[UI_SET_SIG_MS + 5 * ev + k - UI_SET_RAM_COUNT] = (value >> 12 & 0x3F) * 10;
+		return true;
+	}
 	sim_late[id - UI_SET_RAM_COUNT] = value;
 	return true;
 }

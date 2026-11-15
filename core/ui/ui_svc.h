@@ -368,8 +368,14 @@ typedef enum {
 	UI_SET_SIG_FM, UI_SET_SIG_FM_LAST = UI_SET_SIG_FM + 2,
 	UI_SET_SIG_HZ, UI_SET_SIG_HZ_LAST = UI_SET_SIG_HZ + 14,
 	UI_SET_SIG_MS, UI_SET_SIG_MS_LAST = UI_SET_SIG_MS + 14,
+	// One step of a chain, set whole (its frequency and length in one write of the settings area): the value is
+	// UI_SIG_STEP(event, step, Hz, ms). Write only
+	UI_SET_SIG_STEP,
 	UI_SET_COUNT
 } ui_setting_t;
+
+// The value of UI_SET_SIG_STEP: the frequency in bits 0-11, the length in 10 ms units in 12-17, the step in 18-20, the event in 21-22
+#define UI_SIG_STEP(ev, k, hz, ms)	((int32_t)(((hz) & 0xFFFu) | ((((ms) / 10u) & 0x3Fu) << 12) | (((k) & 7u) << 18) | (((ev) & 3u) << 21)))
 
 // UI_SET_ACCENT values: the theme's own highlight (blue), or one of seven. Color displays only
 enum {

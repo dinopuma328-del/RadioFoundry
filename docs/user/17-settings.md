@@ -228,6 +228,9 @@ chain is cut at 600 ms; the line above the steps shows the length so far. With n
 sound** (the permit beep at the start, the call end beep at the end and when idle). The FM end tone is how you get a roger beep from the menu: set it to On air (or Speaker + air); to match the roger beep exactly, set End tone steps to 1200 Hz 100 ms and 900 Hz 100 ms. To copy a CPS call tone of 0, 1570,
 1050, 1570 and 1320 Hz at 40 ms each, set Start tone steps 1 to 5 to those pairs.
 
+- The tones are also saved in the codeplug, so the Codeplug Editor shows them under **Radio > Signaling tones**, and a
+  codeplug written to the radio sets them. In the editor each event is **Not set** (the radio keeps its own setting) or
+  **Set**, with the two outputs and the five steps. A change from the radio's menu is written to the codeplug as well.
 - The start tone on air goes in front of your voice, which starts a little later. The end tone on air goes after you
   let go of **PTT**, and the radio stays on the air for it (up to about one second) before it ends the transmission.
 - A channel with **Talk permit beeps** off has none of these tones.

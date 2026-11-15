@@ -482,7 +482,7 @@ the radio. No new view field: `follow_volume` already filters the knob (2 %, the
 (`volume_bar_checks`, every display class, a seeded property run), `radioCoreTest` (`test_volume_step_of`), gallery
 `volume_bar`, `volume_bar_call`.
 
-### 4.3 Signaling tones (CONFIG_BEEP)
+### 4.3 Signaling tones (CONFIG_SIG_TONES)
 
 Short tone sequences at three events, on the speaker, on air or both, set separately for DMR and for FM
 (`core/radio/sigtone.h`, Settings > Sound). Each sequence is up to 5 steps of `{Hz, ms}` (`SIG_STEPS`), at most 600 ms in
@@ -506,6 +506,12 @@ tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG
 is the event's standard sound (the permit beep at the start, the call end beep otherwise). Settings > Signaling tones
 edits the three chains in `settings_t` (the `sig-chain` screen, [ui.md](ui.md) 2): nothing is built in beyond that standard
 sound.
+
+The three events are also keys of the codeplug's settings area (0x0007-0x0009, [codeplug-settings.md](codeplug-settings.md)
+3.3): the outputs and the chain of an event, as one record. A key that is present holds over the radio's own copy, and a
+change from the menu writes the event's record (one write for a step's frequency and length) as every keyed setting
+does (5.2). A record with a value the setting can't take reads as absent. Without `CONFIG_SIG_TONES` the keys are kept
+and carried but do nothing.
 
 | On air | How |
 |---|---|

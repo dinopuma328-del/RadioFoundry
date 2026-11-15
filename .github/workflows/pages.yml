@@ -55,7 +55,7 @@ jobs:
         run: |
           set -eu
           python -m pip install -q -r site/requirements.txt
-          python site/build.py --strict --out build/site --firmware dist \
+          python site/build.py --strict --own-images --out build/site --firmware dist \
             --repo-url "https://github.com/${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

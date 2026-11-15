@@ -1343,6 +1343,19 @@ async function requestBuild(redraw) {
 	redraw();
 	try {
 		const rels = S.data.releases.filter((x) => x.board === S.radio.id);
+		if (S.data.site.own_images) {	// a fork with no build service (site/build.py --own-images): its own full image
+			const rel = rels.filter((x) => x.variant === "full").at(-1) || rels.at(-1);
+			if (!rel) throw new Error(t("flash.build.no_image"));
+			const [m, img] = await Promise.all([fetch(`${ROOT}${rel.manifest}`).then((r) => r.json()),
+				fetch(`${ROOT}${rel.image}`).then((r) => r.arrayBuffer()).then((x) => new Uint8Array(x))]);
+			await verify(m, img, fb(), S.board.id);
+			if (!current()) return;
+			S.firmware = { manifest: m, image: img, source: t("flash.build.built", { version: m.version }), origin: "release",
+				variant: rel.variant || "full", selection: key };
+			S.build = null;
+			redraw();
+			return;
+		}
 		if (VERSION_REF && !validRef(VERSION_REF)) throw new Error(t("flash.version.bad", { ref: VERSION_REF }));
 		const id = useId();
 		let b = await api("POST", "builds", { board: S.radio.id, ref: VERSION_REF || (rels.length ? rels[rels.length - 1].version : defaultRef(S.data.site.branch)), features: [...sel.on].sort(),

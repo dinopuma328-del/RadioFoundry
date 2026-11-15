@@ -1435,7 +1435,7 @@ static void draw_chips_dmr(const radio_view_t *v, const ui_state_t *s)
 		x = gfx_text(f, x, L->chips_y, buf, temp ? ui_col.warn : ui_col.fg) + f->w;
 	}
 	if (v->dmr.rmo)
-		x = gfx_text(f, x, L->chips_y, v->dmr.repeater_up ? "RPT" : "Rpt", ui_col.fg) + f->w;
+		x = gfx_text(f, x, L->chips_y, "Rpt", ui_col.fg) + f->w;	// a repeater channel; the signal bars show it heard
 #if CONFIG_DMR_ROAMING
 	// Roaming here: Roam, Lock when locked to the site, amber Roam? when the site is weak (dmr-roaming.md 6.2)
 	if (v->roam.state != RROAM_STATE_OFF) {
@@ -1599,7 +1599,11 @@ static void draw_dmr_call(const radio_view_t *v, const ui_state_t *s)
 		sb_chr(&b, ' ');
 	}
 	sb_str(&b, "TS");
-	sb_u32(&b, d->ts, 1);
+	sb_u32(&b, d->rx_ts ? d->rx_ts : d->ts, 1);
+	if (d->hear_all && d->rx_cc != d->cc) {	// found by digital monitor: the code to set to talk to them
+		sb_str(&b, " CC");
+		sb_u32(&b, d->rx_cc, 1);
+	}
 	if (d->late_entry)
 		sb_str(&b, TR(" late"));
 	if (d->call.encrypted)

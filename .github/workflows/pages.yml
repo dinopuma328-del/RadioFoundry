@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 The RadioFoundry Authors
+#
+# A fork's own web site on GitHub Pages: builds the C-SKY firmware of the fork's main (the csky-elf image, public on
+# ghcr.io), writes the site with those images in its web flasher (site/build.py --firmware), and deploys it. The
+# project's own site is built by Cloudflare Pages (.github/workflows/site.yml, docs/dev/website.md); this workflow is for
+# a fork that has no Cloudflare project, so nothing here needs a secret.
+#
+# One-time setup in the fork: Settings > Actions > General (allow actions), then Settings > Pages > Build and
+# deployment > Source: GitHub Actions. The site is at https://<user>.github.io/<repository>/. The flasher needs https:
+# Pages has it.
+name: Pages (fork)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: third_party submodules
+        run: tools/checkout-submodules.sh
+      - name: Toolchain (the C-SKY compiler of the hrc7000 platform)
+        id: tc
+        uses: ./.github/actions/toolchain
+        with:
+          toolchain: csky
+      - name: Firmware of every releasable C-SKY radio, without the AMBE codec
+        env:
+          RUN: ${{ steps.tc.outputs.run }}
+        run: |
+          set -eu
+          $RUN tools/release_build.sh --toolchain csky --version "dev-${GITHUB_SHA::8}" --out dist
+          ls -l dist
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0   # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: The site, with those images in its flasher
+        run: |
+          set -eu
+          python -m pip install -q -r site/requirements.txt
+          python site/build.py --strict --out build/site --firmware dist \
+            --repo-url "https://github.com/${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

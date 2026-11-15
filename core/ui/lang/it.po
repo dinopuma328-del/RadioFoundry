@@ -2816,6 +2816,50 @@ msgstr "Prima copia"
 msgid "Dual-path RX"
 msgstr "RX doppia via"
 
+#: core/ui/ui_menus.c
+msgid "Speaker"
+msgstr "Altoparlante"
+
+#: core/ui/ui_menus.c
+msgid "On air"
+msgstr "In onda"
+
+#: core/ui/ui_menus.c
+msgid "Speaker + air"
+msgstr "Altoparlante + onda"
+
+#: core/ui/ui_menus.c
+msgid "Standard"
+msgstr "Standard"
+
+#: core/ui/ui_menus.c
+msgid "Chirp"
+msgstr "Cinguettio"
+
+#: core/ui/ui_menus.c
+msgid "Blip"
+msgstr "Bip"
+
+#: core/ui/ui_menus.c
+msgid "Double blip"
+msgstr "Doppio bip"
+
+#: core/ui/ui_menus.c
+msgid "Roger"
+msgstr "Roger"
+
+#: core/ui/ui_menus.c
+msgid "Five tone call"
+msgstr "Chiamata a 5 toni"
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 kHz"
+msgstr "Libero 2 kHz"
+
+#: core/ui/ui_menus.c
+msgid "Reset pair"
+msgstr "Coppia di reset"
+
 #: core/ui/ui_menus.c core/ui/ui_screens.c
 msgid "Volume"
 msgstr "Volume"
@@ -2867,6 +2911,42 @@ msgstr "Tono messaggio"
 #: core/ui/ui_menus.c
 msgid "Vibrate"
 msgstr "Vibrazione"
+
+#: core/ui/ui_menus.c
+msgid "DMR start tone"
+msgstr "Tono inizio DMR"
+
+#: core/ui/ui_menus.c
+msgid "DMR end tone"
+msgstr "Tono fine DMR"
+
+#: core/ui/ui_menus.c
+msgid "DMR idle tone"
+msgstr "Tono libero DMR"
+
+#: core/ui/ui_menus.c
+msgid "FM start tone"
+msgstr "Tono inizio FM"
+
+#: core/ui/ui_menus.c
+msgid "FM end tone"
+msgstr "Tono fine FM"
+
+#: core/ui/ui_menus.c
+msgid "FM idle tone"
+msgstr "Tono libero FM"
+
+#: core/ui/ui_menus.c
+msgid "Start tone sound"
+msgstr "Suono tono inizio"
+
+#: core/ui/ui_menus.c
+msgid "End tone sound"
+msgstr "Suono tono fine"
+
+#: core/ui/ui_menus.c
+msgid "Idle tone sound"
+msgstr "Suono tono libero"
 
 #: core/ui/ui_menus.c
 msgid "Brightness"

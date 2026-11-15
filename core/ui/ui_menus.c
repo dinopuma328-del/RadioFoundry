@@ -17,6 +17,7 @@
 #include "config.h"
 #include "hal_time.h"
 #include "radio/tones.h"
+#include "radio/sigtone.h"
 #include "radio/mic_gain.h"
 #include "radio/ref_trim.h"
 #include "radio/radio_am.h"
@@ -5665,6 +5666,18 @@ static const char *const n_sfrcwid[] = { TRN("Off"), TRN("5 min"), TRN("10 min")
 static const int16_t v_ptype[] = { 0, 1, 2 };	// dmrPrivacyType_t
 static const char *const n_ptype[] = { TRN("Off"), "Motorola", "Anytone" };
 
+// Signaling tones (core/radio/sigtone.h): where each sounds (sig_out_t) and which sound (sig_snd_t). The reception's
+// end and FM's start have no on air copy: nothing is sent then
+static const int16_t v_sigout[] = { 0, 1, 2, 3, 4 };
+static const char *const n_sigout[] = { TRN("Default"), TRN("Off"), TRN("Speaker"), TRN("On air"), TRN("Speaker + air") };
+static const int16_t v_sigout_local[] = { 0, 1, 2 };
+static const char *const n_sigout_local[] = { TRN("Default"), TRN("Off"), TRN("Speaker") };
+static const int16_t v_sigsnd[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+static const char *const n_sigsnd[] = {
+	TRN("Standard"), TRN("Chirp"), TRN("Blip"), TRN("Double blip"), TRN("Roger"), TRN("Five tone call"),
+	TRN("Idle 2 kHz"), TRN("Reset pair"),
+};
+
 #define TOGGLE(nm, syn_, sid) { nm, syn_, ST_TOGGLE, sid, 0, { { 0, 1, 1, NULL } } }
 #define NUMBER(nm, syn_, sid, lo, hi, st, u) { nm, syn_, ST_NUMBER, sid, 0, { { lo, hi, st, u } } }
 #define LIST(nm, syn_, sid, v, nms) { nm, syn_, ST_LIST, sid, sizeof v / sizeof v[0], { .values = v, .names = nms } }
@@ -5686,6 +5699,21 @@ static const set_item_t s_sound[] = {
 #if CONFIG_VIBRATE
 	TOGGLE(TRN("Vibrate"), "vibration motor silent", UI_SET_VIBRATE),
 #endif
+#if CONFIG_DMR
+	LIST(TRN("DMR start tone"), "talk permit roger signaling", UI_SET_SIG_DMR + SIG_EV_BEGIN, v_sigout, n_sigout),
+	LIST(TRN("DMR end tone"), "roger signaling", UI_SET_SIG_DMR + SIG_EV_END, v_sigout, n_sigout),
+	LIST(TRN("DMR idle tone"), "channel free signaling", UI_SET_SIG_DMR + SIG_EV_IDLE, v_sigout_local, n_sigout_local),
+#endif
+	LIST(TRN("FM start tone"), "signaling", UI_SET_SIG_FM + SIG_EV_BEGIN, v_sigout_local, n_sigout_local),
+#if CONFIG_FM_TX_TONES
+	LIST(TRN("FM end tone"), "roger signaling", UI_SET_SIG_FM + SIG_EV_END, v_sigout, n_sigout),
+#else
+	LIST(TRN("FM end tone"), "roger signaling", UI_SET_SIG_FM + SIG_EV_END, v_sigout_local, n_sigout_local),
+#endif
+	LIST(TRN("FM idle tone"), "channel free signaling", UI_SET_SIG_FM + SIG_EV_IDLE, v_sigout_local, n_sigout_local),
+	LIST(TRN("Start tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_BEGIN, v_sigsnd, n_sigsnd),
+	LIST(TRN("End tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_END, v_sigsnd, n_sigsnd),
+	LIST(TRN("Idle tone sound"), "signaling", UI_SET_SIG_SND + SIG_EV_IDLE, v_sigsnd, n_sigsnd),
 };
 static const set_item_t s_display[] = {
 	NUMBER(TRN("Brightness"), "backlight", UI_SET_BRIGHTNESS, 10, 100, 10, "%"),
@@ -6042,6 +6070,11 @@ static const char *set_why_not(const set_item_t *s)
 	case UI_SET_TOT_WARN_TONE:
 	case UI_SET_BATTERY_TONE:
 	case UI_SET_TX_DENY_TONE:
+		return CONFIG_BEEP ? NULL : TR("Tones: not in this build");
+	case UI_SET_SIG_DMR ... UI_SET_SIG_DMR_LAST:
+		return CONFIG_DMR && CONFIG_BEEP ? NULL : CONFIG_BEEP ? TR("DMR: not in this build") : TR("Tones: not in this build");
+	case UI_SET_SIG_FM ... UI_SET_SIG_FM_LAST:
+	case UI_SET_SIG_SND ... UI_SET_SIG_SND_LAST:
 		return CONFIG_BEEP ? NULL : TR("Tones: not in this build");
 	case UI_SET_SCAN_TONE:
 		return !CONFIG_BEEP ? TR("Tones: not in this build") : feats() & UI_FEAT_SCAN ? NULL : TR("Scan: not in this build");

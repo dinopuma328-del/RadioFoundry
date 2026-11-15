@@ -2818,6 +2818,50 @@ msgstr "第一份副本"
 msgid "Dual-path RX"
 msgstr "双路接收"
 
+#: core/ui/ui_menus.c
+msgid "Speaker"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "On air"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Speaker + air"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Standard"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Chirp"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Blip"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Double blip"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Roger"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Five tone call"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle 2 kHz"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Reset pair"
+msgstr ""
+
 #: core/ui/ui_menus.c core/ui/ui_screens.c
 msgid "Volume"
 msgstr "音量"
@@ -2869,6 +2913,42 @@ msgstr "消息提示音"
 #: core/ui/ui_menus.c
 msgid "Vibrate"
 msgstr "振动"
+
+#: core/ui/ui_menus.c
+msgid "DMR start tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "DMR end tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "DMR idle tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "FM start tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "FM end tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "FM idle tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start tone sound"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End tone sound"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle tone sound"
+msgstr ""
 
 #: core/ui/ui_menus.c
 msgid "Brightness"

@@ -4830,6 +4830,10 @@ static void clamp_settings(radio_settings_t *s)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		s->sig_dmr[i] = sig_out_clean(s->sig_dmr[i], (sig_event_t)i);
 		s->sig_fm[i] = sig_out_clean(s->sig_fm[i], (sig_event_t)i);
+		if (i == SIG_EV_BEGIN && (s->sig_fm[i] == SIG_OUT_AIR || s->sig_fm[i] == SIG_OUT_BOTH)) {
+			// An FM start tone on air isn't sent (the transmitter keys with the mic live): speaker only
+			s->sig_fm[i] = s->sig_fm[i] == SIG_OUT_BOTH ? SIG_OUT_LOCAL : SIG_OUT_OFF;
+		}
 		if (s->sig_snd[i] >= SIG_SND_COUNT) {
 			s->sig_snd[i] = SIG_SND_STANDARD;
 		}

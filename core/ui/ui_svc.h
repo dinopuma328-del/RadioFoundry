@@ -360,6 +360,12 @@ typedef enum {
 	// the emergency tone for an alert heard (dmr_emergency_settings_t.rx_tone, CONFIG_DMR_EMERGENCY)
 	UI_SET_SCAN_TONE,
 	UI_SET_EMERGENCY_TONE,
+	// Signaling tones (Settings > Sound; radio_settings_t.sig_dmr / sig_fm / sig_snd, core/radio/sigtone.h): per event
+	// (start of a transmission, its end, a reception's end) where it sounds in DMR and in FM (sig_out_t) and which
+	// sound (sig_snd_t). Each group is the events in order: UI_SET_SIG_DMR + sig_event_t
+	UI_SET_SIG_DMR, UI_SET_SIG_DMR_LAST = UI_SET_SIG_DMR + 2,
+	UI_SET_SIG_FM, UI_SET_SIG_FM_LAST = UI_SET_SIG_FM + 2,
+	UI_SET_SIG_SND, UI_SET_SIG_SND_LAST = UI_SET_SIG_SND + 2,
 	UI_SET_COUNT
 } ui_setting_t;
 

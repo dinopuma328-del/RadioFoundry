@@ -3959,6 +3959,35 @@ static void test_ui_glue(void)
 	ui_svc_apply(UI_SET_TALK_PERMIT, 1);
 	run(20);
 	CHECK(sm.set.talk_permit);
+	// Signaling tones (Settings > Sound, sigtone.h): the default until set; a set reaches the radio core, which clamps
+	// it (no on air copy of a reception's end), saves it in settings_t and gives it back; an old record reads default
+	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
+		CHECK(ui_svc_setting_get((uint8_t)(UI_SET_SIG_DMR + ev)) == SIG_OUT_DEFAULT &&
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_FM + ev)) == SIG_OUT_DEFAULT &&
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_SND + ev)) == SIG_SND_STANDARD);
+	}
+	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_BEGIN, SIG_OUT_BOTH);
+	ui_svc_apply(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_AIR);	// nothing to send when a reception ends
+	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_END, SIG_OUT_AIR);
+	ui_svc_apply(UI_SET_SIG_FM + SIG_EV_BEGIN, SIG_OUT_BOTH);	// FM's start tone is the speaker's only
+	ui_svc_apply(UI_SET_SIG_SND + SIG_EV_END, SIG_SND_CALL5);
+	ui_svc_apply(UI_SET_SIG_SND + SIG_EV_IDLE, 200);		// not a sound: the standard one
+	run(20);
+	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT &&
+	      sm.set.sig_fm[SIG_EV_END] == SIG_OUT_AIR && sm.set.sig_fm[SIG_EV_BEGIN] == SIG_OUT_LOCAL &&
+	      sm.set.sig_snd[SIG_EV_END] == SIG_SND_CALL5 && sm.set.sig_snd[SIG_EV_IDLE] == SIG_SND_STANDARD);
+	CHECK(ui_svc_setting_get(UI_SET_SIG_DMR + SIG_EV_BEGIN) == SIG_OUT_BOTH &&
+	      ui_svc_setting_get(UI_SET_SIG_SND + SIG_EV_END) == SIG_SND_CALL5);
+	settings_read(&sv);
+	CHECK(sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sv.sig_fm[SIG_EV_END] == SIG_OUT_AIR &&
+	      sv.sig_snd[SIG_EV_END] == SIG_SND_CALL5 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
+	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
+		ui_svc_apply((uint8_t)(UI_SET_SIG_DMR + ev), SIG_OUT_DEFAULT);
+		ui_svc_apply((uint8_t)(UI_SET_SIG_FM + ev), SIG_OUT_DEFAULT);
+		ui_svc_apply((uint8_t)(UI_SET_SIG_SND + ev), SIG_SND_STANDARD);
+	}
+	run(20);
+	CHECK(sm.set.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_DEFAULT && sm.set.sig_snd[SIG_EV_END] == SIG_SND_STANDARD);
 	// Settings > Sound tones. The four keyed ones (docs/spec/codeplug-settings.md 5.2): on while absent; a set writes
 	// a one-byte bool key with no codeplug reload, and the radio core saves the tone as the radio's own
 	static const uint8_t tone_ids[] = { UI_SET_CALL_END_TONE, UI_SET_TOT_WARN_TONE, UI_SET_BATTERY_TONE,

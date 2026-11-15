@@ -1914,6 +1914,19 @@ static void one_shot_follow(radio_sm_t *sm, uint32_t now_ms)
 
 // PTT on a DMR channel (band, RX-only and frequency checks passed): arm the board's per-burst keying, then the stack
 // decides when the bursts go out
+// The event's tone on air in DMR (sigtone.h): sent as voice in place of the mic, from the first voice of the
+// transmission (start) or after the last of it (end, which holds the over open for it). Not on a no-beep channel, and
+// not while the host sends its own audio
+static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
+{
+	if (sm->host_audio || sm->view.ch.no_beep || !sig_out_air(sig_out(sm, ev), ev)) {
+		return;
+	}
+	beep_seg_t seg[SIG_STEPS];
+	uint8_t n = sig_steps(sm->set.sig_snd[ev], ev, seg);
+	ambeVoiceTxTone(seg, n, ev == SIG_EV_END);
+}
+
 static void dmr_ptt_down(radio_sm_t *sm, uint32_t now_ms)
 {
 	const channel_t *ch = &sm->view.ch;
@@ -1948,6 +1961,7 @@ static void dmr_ptt_down(radio_sm_t *sm, uint32_t now_ms)
 #if CONFIG_DMR_GPS
 	dmr_gps_tx(sm, now_ms);
 #endif
+	sig_air_dmr(sm, SIG_EV_BEGIN);
 	dmr_call_ptt(true);
 	dmr_call_poll(now_ms);
 	dmr_follow(sm, now_ms);
@@ -4192,6 +4206,11 @@ static void ptt_release(radio_sm_t *sm, bool roger, uint32_t now_ms)
 	}
 #if CONFIG_DMR
 	if (sm->dmr_running) {
+		if (sm->view.dmr.state == RDMR_TX) {
+			sig_air_dmr(sm, SIG_EV_END);	// before the stack hears PTT is up: it holds the over open for it
+		} else {
+			ambeVoiceTxToneCancel();	// a start tone for a transmission that never went on air
+		}
 		dmr_call_ptt(false);
 		dmr_call_poll(now_ms);
 		if (sm->view.state == RS_TX) {

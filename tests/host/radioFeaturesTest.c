@@ -252,7 +252,17 @@ static const hal_audio_tap_t fake_tap = { .caps = AUDIO_TAP_FM_RX | AUDIO_TAP_FM
 
 static bool v_present(void) { return true; }
 static void v_reset(void) {}
-static void v_encode(const int16_t *pcm, uint8_t *bits) { (void)pcm; memset(bits, 0, VOCODER_BITS); }
+static unsigned v_enc_blocks, v_enc_tone;	// frames encoded, and those whose samples are not the (silent) mic's: a tone
+static void v_encode(const int16_t *pcm, uint8_t *bits)
+{
+	bool sound = false;
+	for (int i = 0; i < VOCODER_FRAME_SAMPLES; i++) {
+		sound = sound || pcm[i] != 0;
+	}
+	v_enc_blocks++;
+	v_enc_tone += sound;
+	memset(bits, 0, VOCODER_BITS);
+}
 static void v_decode(const uint8_t *bits, int16_t *pcm) { (void)bits; memset(pcm, 0, VOCODER_FRAME_SAMPLES * 2); }
 static const hal_vocoder_t fake_vocoder = { v_present, v_reset, v_encode, v_decode, NULL, NULL, NULL, NULL };
 
@@ -482,6 +492,7 @@ static void start(void)
 	memset(&hw, 0, sizeof(hw));
 	hw.battery_mv = 8000;
 	hw.has_tx_tone = true;
+	v_enc_blocks = v_enc_tone = 0;
 	beep_reset_stats();
 	setup_codeplug();
 	now = 1000;
@@ -3727,6 +3738,111 @@ static void test_sig_dmr(void)
 	board.caps = caps;
 }
 
+// Signaling tones on air in DMR: the start tone is the first voice of the transmission, the end tone goes after the last
+// and holds the over open until the call stack has it all (the mic in this test is silent: a block that isn't is a tone)
+static void set_sig_dmr_begin_air_blip(radio_settings_t *s)
+{
+	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_AIR;
+	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_BLIP;
+}
+static void set_sig_dmr_end_air_chirp(radio_settings_t *s)
+{
+	s->sig_dmr[SIG_EV_END] = SIG_OUT_AIR;
+	s->sig_snd[SIG_EV_END] = SIG_SND_CHIRP;
+}
+static void set_sig_dmr_both_air(radio_settings_t *s)
+{
+	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_BOTH;
+	s->sig_snd[SIG_EV_BEGIN] = SIG_SND_BLIP;
+	s->sig_dmr[SIG_EV_END] = SIG_OUT_BOTH;
+	s->sig_snd[SIG_EV_END] = SIG_SND_CHIRP;
+}
+
+static void test_sig_dmr_air(void)
+{
+	beep_stats_t b0, b1;
+	// Nothing by default: the mic's silence is all that is encoded
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	req(RREQ_PTT, 1);
+	run(600);
+	req(RREQ_PTT, 0);
+	run(1500);
+	CHECK(v_enc_blocks > 10 && v_enc_tone == 0 && !ambeVoiceTxToneBusy());
+
+	// The start tone: 60 ms, three blocks, at the head of the transmission; nothing on the speaker
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_begin_air_blip);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(600);
+	CHECK(sm.view.dmr.state == RDMR_TX && v_enc_tone == 3);
+	beep_get_stats(&b1);
+	CHECK(b1.played == b0.played);
+	req(RREQ_PTT, 0);
+	run(1500);
+	CHECK(sm.view.state == RS_IDLE && v_enc_tone == 3 && !ambeVoiceTxToneBusy());
+
+	// The end tone: 120 ms, six blocks, after PTT is up, and the transmission ends after it
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_end_air_chirp);
+	req(RREQ_PTT, 1);
+	run(600);
+	CHECK(v_enc_tone == 0);
+	req(RREQ_PTT, 0);
+	run(2000);
+	ambe_voice_stats_t vs;
+	ambeVoiceGetStats(&vs);
+	CHECK(sm.view.state == RS_IDLE && v_enc_tone == 6 && vs.tx_overflows == 0 && !ambeVoiceTxToneBusy());
+
+	// Both: the speaker has its copy of each too
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_both_air);
+	beep_get_stats(&b0);
+	req(RREQ_PTT, 1);
+	run(600);
+	req(RREQ_PTT, 0);
+	run(2000);
+	beep_get_stats(&b1);
+	CHECK(v_enc_tone == 9 && b1.played == b0.played + 2);
+
+	// A no-beep channel sends none
+	start();
+	chans[6].no_beep = true;
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_both_air);
+	req(RREQ_PTT, 1);
+	run(600);
+	req(RREQ_PTT, 0);
+	run(2000);
+	CHECK(v_enc_tone == 0);
+	chans[6].no_beep = false;
+
+	// A press that never got on air (PTT up while the stack still waits) leaves no start tone for the next one
+	start();
+	req(RREQ_ZONE_POS, 5);
+	run(50);
+	settings(set_sig_dmr_begin_air_blip);
+	req(RREQ_PTT, 1);
+	req(RREQ_PTT, 0);
+	run(1500);
+	v_enc_tone = 0;
+	settings(set_sig_dmr_begin_off);
+	req(RREQ_PTT, 1);
+	run(600);
+	req(RREQ_PTT, 0);
+	run(1500);
+	CHECK(v_enc_tone == 0);
+}
+
 static void test_dmr_permit_before_key(void)
 {
 	beep_stats_t b0, b1;
@@ -4141,6 +4257,7 @@ int main(void)
 	test_dmr_permit_before_key();
 	test_sig_fm();
 	test_sig_dmr();
+	test_sig_dmr_air();
 	test_tone_keys();
 	test_dmr_short_press_wake();
 	test_vibrate();

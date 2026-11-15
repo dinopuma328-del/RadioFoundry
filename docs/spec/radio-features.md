@@ -504,7 +504,8 @@ beeps and their Settings > Sound switches. The sound is the event's chain (`sig_
 `SIG_HZ_MAX`, 3400 Hz) and a length (multiples of 10 ms), the same shape as the Frequency / Period rows of a CPS alert
 tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG_MAX_MS` (600 ms). A chain with no step
 is the event's standard sound (the permit beep at the start, the call end beep otherwise). Settings > Signaling tones
-edits the three chains in `settings_t`: nothing is built in beyond that standard sound.
+edits the three chains in `settings_t` (the `sig-chain` screen, [ui.md](ui.md) 2): nothing is built in beyond that standard
+sound.
 
 | On air | How |
 |---|---|

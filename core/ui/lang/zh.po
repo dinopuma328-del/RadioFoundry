@@ -2907,123 +2907,15 @@ msgid "FM idle tone"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "Start 1 Hz"
+msgid "Start tone steps"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "Start 1 ms"
+msgid "End tone steps"
 msgstr ""
 
 #: core/ui/ui_menus.c
-msgid "Start 2 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 2 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 3 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 3 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 4 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 4 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 5 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Start 5 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 1 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 1 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 2 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 2 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 3 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 3 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 4 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 4 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 5 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "End 5 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 1 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 1 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 3 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 3 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 4 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 4 ms"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 5 Hz"
-msgstr ""
-
-#: core/ui/ui_menus.c
-msgid "Idle 5 ms"
+msgid "Idle tone steps"
 msgstr ""
 
 #: core/ui/ui_menus.c
@@ -3306,6 +3198,58 @@ msgstr "高级"
 msgid "0-9 open  Back"
 msgstr "0-9 打开  返回"
 
+#: core/ui/ui_menus.c core/ui/ui_screens.c
+msgid "Step "
+msgstr "步进 "
+
+#: core/ui/ui_menus.c
+msgid "Standard sound"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Length: "
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Start Tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "End Tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Idle Tone"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Not changed: "
+msgstr "未改： "
+
+#: core/ui/ui_menus.c
+msgid " to "
+msgstr " 到 "
+
+#: core/ui/ui_menus.c
+msgid ", steps of "
+msgstr "，步进 "
+
+#: core/ui/ui_menus.c
+msgid "0-9 type  OK next  Back"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid "Standard"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid " step"
+msgstr ""
+
+#: core/ui/ui_menus.c
+msgid " steps"
+msgstr ""
+
 #: core/ui/ui_menus.c
 msgid "Talk permit tone: not in this build"
 msgstr "通话许可音：本版本无"
@@ -3369,18 +3313,6 @@ msgstr "诊断：本版本无"
 #: core/ui/ui_menus.c
 msgid "Settings are saved as you change them"
 msgstr "设置更改即保存"
-
-#: core/ui/ui_menus.c
-msgid "Not changed: "
-msgstr "未改： "
-
-#: core/ui/ui_menus.c
-msgid " to "
-msgstr " 到 "
-
-#: core/ui/ui_menus.c
-msgid ", steps of "
-msgstr "，步进 "
 
 #: core/ui/ui_menus.c core/ui/ui_position.c
 msgid "OK change  Back"
@@ -3533,10 +3465,6 @@ msgstr "扫描"
 #: core/ui/ui_screens.c
 msgid "ROAM"
 msgstr "漫游"
-
-#: core/ui/ui_screens.c
-msgid "Step "
-msgstr "步进 "
 
 #: core/ui/ui_screens.c
 msgid "No TX frequency"

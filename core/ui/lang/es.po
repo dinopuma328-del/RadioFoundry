@@ -2905,124 +2905,16 @@ msgid "FM idle tone"
 msgstr "Tono de canal libre FM"
 
 #: core/ui/ui_menus.c
-msgid "Start 1 Hz"
-msgstr "Inicio 1 Hz"
+msgid "Start tone steps"
+msgstr "Pasos tono inicio"
 
 #: core/ui/ui_menus.c
-msgid "Start 1 ms"
-msgstr "Sonido tono inicio"
+msgid "End tone steps"
+msgstr "Pasos tono fin"
 
 #: core/ui/ui_menus.c
-msgid "Start 2 Hz"
-msgstr "Inicio 2 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Start 2 ms"
-msgstr "Inicio 2 ms"
-
-#: core/ui/ui_menus.c
-msgid "Start 3 Hz"
-msgstr "Inicio 3 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Start 3 ms"
-msgstr "Inicio 3 ms"
-
-#: core/ui/ui_menus.c
-msgid "Start 4 Hz"
-msgstr "Inicio 4 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Start 4 ms"
-msgstr "Inicio 4 ms"
-
-#: core/ui/ui_menus.c
-msgid "Start 5 Hz"
-msgstr "Inicio 5 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Start 5 ms"
-msgstr "Inicio 5 ms"
-
-#: core/ui/ui_menus.c
-msgid "End 1 Hz"
-msgstr "Fin 1 Hz"
-
-#: core/ui/ui_menus.c
-msgid "End 1 ms"
-msgstr "Fin 1 ms"
-
-#: core/ui/ui_menus.c
-msgid "End 2 Hz"
-msgstr "Libre 2 kHz"
-
-#: core/ui/ui_menus.c
-msgid "End 2 ms"
-msgstr "Fin 2 ms"
-
-#: core/ui/ui_menus.c
-msgid "End 3 Hz"
-msgstr "Fin 3 Hz"
-
-#: core/ui/ui_menus.c
-msgid "End 3 ms"
-msgstr "Fin 3 ms"
-
-#: core/ui/ui_menus.c
-msgid "End 4 Hz"
-msgstr "Fin 4 Hz"
-
-#: core/ui/ui_menus.c
-msgid "End 4 ms"
-msgstr "Fin 4 ms"
-
-#: core/ui/ui_menus.c
-msgid "End 5 Hz"
-msgstr "Fin 5 Hz"
-
-#: core/ui/ui_menus.c
-msgid "End 5 ms"
-msgstr "Fin 5 ms"
-
-#: core/ui/ui_menus.c
-msgid "Idle 1 Hz"
-msgstr "Libre 1 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Idle 1 ms"
-msgstr "Libre 1 ms"
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 Hz"
-msgstr "Libre 2 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Idle 2 ms"
-msgstr "Libre 2 ms"
-
-#: core/ui/ui_menus.c
-msgid "Idle 3 Hz"
-msgstr "Libre 3 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Idle 3 ms"
-msgstr "Libre 3 ms"
-
-#: core/ui/ui_menus.c
-msgid "Idle 4 Hz"
-msgstr "Libre 4 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Idle 4 ms"
-msgstr "Libre 4 ms"
-
-#: core/ui/ui_menus.c
-msgid "Idle 5 Hz"
-msgstr "Libre 5 Hz"
-
-#: core/ui/ui_menus.c
-msgid "Idle 5 ms"
-msgstr "Libre 5 ms"
+msgid "Idle tone steps"
+msgstr "Pasos tono libre"
 
 #: core/ui/ui_menus.c
 msgid "Brightness"
@@ -3304,6 +3196,58 @@ msgstr "Avanzado"
 msgid "0-9 open  Back"
 msgstr "0-9 abrir  Atrás"
 
+#: core/ui/ui_menus.c core/ui/ui_screens.c
+msgid "Step "
+msgstr "Paso "
+
+#: core/ui/ui_menus.c
+msgid "Standard sound"
+msgstr "Sonido estándar"
+
+#: core/ui/ui_menus.c
+msgid "Length: "
+msgstr "Duración: "
+
+#: core/ui/ui_menus.c
+msgid "Start Tone"
+msgstr "Tono de Inicio"
+
+#: core/ui/ui_menus.c
+msgid "End Tone"
+msgstr "Tono de Fin"
+
+#: core/ui/ui_menus.c
+msgid "Idle Tone"
+msgstr "Tono Libre"
+
+#: core/ui/ui_menus.c
+msgid "Not changed: "
+msgstr "Sin cambio: "
+
+#: core/ui/ui_menus.c
+msgid " to "
+msgstr " a "
+
+#: core/ui/ui_menus.c
+msgid ", steps of "
+msgstr ", pasos de "
+
+#: core/ui/ui_menus.c
+msgid "0-9 type  OK next  Back"
+msgstr "0-9 teclear  OK sigue  Atrás"
+
+#: core/ui/ui_menus.c
+msgid "Standard"
+msgstr "Estándar"
+
+#: core/ui/ui_menus.c
+msgid " step"
+msgstr " paso"
+
+#: core/ui/ui_menus.c
+msgid " steps"
+msgstr " pasos"
+
 #: core/ui/ui_menus.c
 msgid "Talk permit tone: not in this build"
 msgstr "Tono de permiso: no disponible"
@@ -3367,18 +3311,6 @@ msgstr "Diagnóstico: no disponible"
 #: core/ui/ui_menus.c
 msgid "Settings are saved as you change them"
 msgstr "Los ajustes se guardan al cambiarlos"
-
-#: core/ui/ui_menus.c
-msgid "Not changed: "
-msgstr "Sin cambio: "
-
-#: core/ui/ui_menus.c
-msgid " to "
-msgstr " a "
-
-#: core/ui/ui_menus.c
-msgid ", steps of "
-msgstr ", pasos de "
 
 #: core/ui/ui_menus.c core/ui/ui_position.c
 msgid "OK change  Back"
@@ -3531,10 +3463,6 @@ msgstr "ESC"
 #: core/ui/ui_screens.c
 msgid "ROAM"
 msgstr "ROAM"
-
-#: core/ui/ui_screens.c
-msgid "Step "
-msgstr "Paso "
 
 #: core/ui/ui_screens.c
 msgid "No TX frequency"

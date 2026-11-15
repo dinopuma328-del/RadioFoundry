@@ -213,18 +213,20 @@ pick where the tone sounds, and you build the tone yourself, step by step.
 The idle tone and the FM start tone have no On air choice: nothing is sent at those moments.
 
 **The tone itself** is a chain of up to five steps per event, like the Frequency and Period rows of a CPS alert tone
-page. Each step has two rows, for example **Start 1 Hz** and **Start 1 ms**:
+page. The rows **Start tone steps**, **End tone steps** and **Idle tone steps** show how many steps each chain has
+("Standard" when it has none) and open its five steps:
 
-| Row | Values | What it does |
+| Step | Shown as | Values |
 |---|---|---|
-| Start / End / Idle 1 to 5 Hz | 0 to 3400, in steps of 10 | The step's pitch. 0 is a pause |
-| Start / End / Idle 1 to 5 ms | 0 to 600, in steps of 10 | The step's length. 0 ends the chain: later steps are ignored |
+| Frequency | `1570 Hz` | 0 to 3400, in steps of 10. 0 is a pause |
+| Length | `40 ms` | 0 to 600, in steps of 10. 0 ends the chain: later steps are ignored |
 
-Press **OK** on a row and type the number with the keypad (`1 5 7 0`), or step it with Up and Down, then **OK**. A
-number off the steps or out of the range is refused and the message says what fits. The whole chain is cut at 600 ms.
-With every length at 0 the event plays its **standard sound** (the permit beep at the start, the call end beep at the
-end and when idle). To copy a CPS call tone of 0, 1570, 1050, 1570 and 1320 Hz at 40 ms each, type those five pairs
-into Start 1 to 5.
+To set a step, press **OK** on it, type the frequency with the keypad (`1 5 7 0`) or step it with Up and Down, press
+**OK**, then do the same for the length and press **OK** again. **Back** leaves the step as it was. A number off the
+steps or out of the range is refused and the message says what fits. A step that was off starts at 40 ms. The whole
+chain is cut at 600 ms; the line above the steps shows the length so far. With no step the event plays its **standard
+sound** (the permit beep at the start, the call end beep at the end and when idle). To copy a CPS call tone of 0, 1570,
+1050, 1570 and 1320 Hz at 40 ms each, set Start tone steps 1 to 5 to those pairs.
 
 - The start tone on air goes in front of your voice, which starts a little later. The end tone on air goes after you
   let go of **PTT**, and the radio stays on the air for it (up to about one second) before it ends the transmission.

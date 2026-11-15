@@ -12,7 +12,7 @@ import { decode, encode, empty, remove, validate, newChannel, newContact, number
 import { LIMITS, decodeGeneral } from "../codeplug/records.js";
 import { CpsSerial, TransportError, estimate, keepIdentity, IDENTITY, iddbRanges } from "../codeplug/transport.js";
 import { FastError } from "../codeplug/fastlink.js";
-import { areaForWrite, KEYS } from "../codeplug/kv.js";
+import { areaForWrite, KEYS, RECORD_KEYS, SIG_STEPS } from "../codeplug/kv.js";
 import { toSerial, CLICK_WAIT_MS } from "../flasher/netmode.js";
 import { convert as convertDb, readHeader as dbHeader } from "../codeplug/iddb.js";
 import { convertIddb, iddbEnd } from "../codeplug/sources/output.js";
@@ -398,6 +398,39 @@ function radioTab() {
 		return h("div", { class: "form-row" }, h("label", { for: "g-" + key }, label), sel,
 			h("span", { class: "small muted" }, t("editor.general.tone_help")));
 	};
+	// a signaling tone record of the settings area (kv.js RECORD_KEYS, codeplug-settings.md 3.3): Not set, or Set with the
+	// outputs and the five steps. A value out of range is the Problems tab's to say
+	const sigBlock = (row) => {
+		const rec = g[row.name];
+		const put = (next) => change(t("editor.undo.edit"), () => (S.model.general = { ...S.model.general, [row.name]: next }));
+		const sel = h("select", { id: "g-" + row.name },
+			h("option", { value: "" }, t("editor.general.not_set")),
+			h("option", { value: "1" }, t("editor.sig.set")));
+		sel.value = rec == null ? "" : "1";
+		sel.addEventListener("change", () => put(sel.value === "" ? null
+			: { dmr: 0, fm: 0, hz: Array(SIG_STEPS).fill(0), ms: Array(SIG_STEPS).fill(0) }));
+		const head = h("div", { class: "form-row" }, h("label", { for: "g-" + row.name }, t(`editor.sig.${row.name.slice(3).toLowerCase()}`)), sel);
+		if (rec == null) return head;
+		const outputs = (key, air) => {
+			const o = h("select", { id: `g-${row.name}-${key}` },
+				...[0, 1, 2, 3, 4].filter((v) => air || (v !== 3 && v !== 4)).map((v) => h("option", { value: String(v) }, t(`editor.sig.out.${v}`))));
+			o.value = String(rec[key]);
+			o.addEventListener("change", () => put({ ...rec, [key]: Number(o.value) }));
+			return h("div", { class: "form-row" }, h("label", { for: o.id }, t(`editor.sig.${key}`)), o);
+		};
+		const num = (key, i, unit) => {
+			const inp = h("input", { type: "number", min: "0", step: unit === "ms" ? "10" : "1", value: String(rec[key][i]), size: 5,
+				"aria-label": `${t("editor.sig.step", { n: i + 1 })} ${t(`editor.sig.${unit}`)}` });
+			inp.addEventListener("change", () => {
+				const n = Math.trunc(Number(inp.value));
+				put({ ...rec, [key]: rec[key].map((x, j) => (j === i ? (Number.isFinite(n) && n >= 0 ? n : 0) : x)) });
+			});
+			return h("span", {}, inp, " ", t(`editor.sig.${unit}`));
+		};
+		const steps = Array.from({ length: SIG_STEPS }, (_, i) =>
+			h("div", { class: "form-row" }, h("span", {}, t("editor.sig.step", { n: i + 1 })), num("hz", i, "hz"), num("ms", i, "ms")));
+		return h("div", {}, head, outputs("dmr", row.air), outputs("fm", row.fmAir), ...steps);
+	};
 	const parts = [
 		h("div", { class: "form-grid ed-radio-form" },
 			field("dmrId", t("editor.general.dmr_id"), 8, t("editor.general.dmr_id_help"), num(0, 0xFFFFFF)),
@@ -412,6 +445,9 @@ function radioTab() {
 			onOff("totWarnTone", t("editor.general.tot_warn_tone")),
 			onOff("batteryTone", t("editor.general.battery_tone")),
 			onOff("txDenyTone", t("editor.general.tx_deny_tone"))),
+		h("h3", {}, t("editor.sig.title")),
+		h("p", { class: "small muted" }, t("editor.sig.help")),
+		...RECORD_KEYS.map(sigBlock),
 	];
 	if (S.conn) {
 		const p = S.conn.probe;

@@ -195,8 +195,6 @@ static void beep(radio_sm_t *sm, uint8_t b)
 
 _Static_assert(SIG_EV_COUNT == 3, "radio_settings_t.sig_* hold three events");
 _Static_assert(SIG_STEPS == 10, "radio_settings_t.sig_hz / sig_ms hold ten steps");
-_Static_assert(SIG_MAX_MS / SIG_MS_UNIT < 128, "a step's length is 7 bits in settings_t.sig_step");
-_Static_assert(SIG_HZ_MAX / SIG_HZ_UNIT < 512, "a step's frequency is 9 bits in settings_t.sig_step");
 
 // Where the event's tone goes on this channel's mode (sig_out_t)
 static uint8_t sig_out(const radio_sm_t *sm, sig_event_t ev)
@@ -4316,8 +4314,9 @@ static void ptt_down(radio_sm_t *sm, uint32_t now_ms)
 		return;
 	}
 #endif
-	// The start of transmission tone on the speaker, where the board can sound a beep while it transmits
-	if ((board.caps & CAP_BEEP_NOT_ON_AIR) == 0 && sig_local_on(sm, SIG_EV_BEGIN)) {
+	// The start of transmission tone on the speaker. CAP_BEEP_NOT_ON_AIR is about the DMR engine closing the audio path
+	// while it transmits; the FM transmitter doesn't, so the speaker copy plays on every board
+	if (sig_local_on(sm, SIG_EV_BEGIN)) {
 		sig_local(sm, SIG_EV_BEGIN);
 	}
 #if CONFIG_FM_TX_TONES && CONFIG_SIG_TONES
@@ -4966,6 +4965,7 @@ static void clamp_settings(radio_settings_t *s)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		s->sig_dmr[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_dmr[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
 		s->sig_fm[i] = CONFIG_SIG_TONES ? sig_out_clean(s->sig_fm[i], (sig_event_t)i) : SIG_OUT_DEFAULT;
+#if CONFIG_SIG_TONES
 		for (unsigned k = 0; k < SIG_STEPS; k++) {
 			if (s->sig_hz[i][k] > SIG_HZ_MAX) {
 				s->sig_hz[i][k] = SIG_HZ_MAX;
@@ -4975,6 +4975,7 @@ static void clamp_settings(radio_settings_t *s)
 				s->sig_ms[i][k] = SIG_MAX_MS / SIG_MS_UNIT;
 			}
 		}
+#endif
 	}
 	if (s->beep_level > 100) {
 		s->beep_level = 100;
@@ -5066,10 +5067,6 @@ static void settings_to_radio(const settings_t *st, radio_settings_t *s)
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		s->sig_dmr[i] = st->sig_dmr[i];	// 0 = default, in a record from before them; clamp_settings checks
 		s->sig_fm[i] = st->sig_fm[i];
-		for (unsigned k = 0; k < SIG_STEPS; k++) {
-			s->sig_hz[i][k] = settings_sig_hz(st->sig_step[i][k]);
-			s->sig_ms[i][k] = settings_sig_ms10(st->sig_step[i][k]);
-		}
 	}
 	if (st->rs_stored != 1) {
 		return;
@@ -5127,13 +5124,12 @@ static void radio_to_settings(const radio_settings_t *s, uint32_t now_ms)
 	st->rs_dual_delay = (uint8_t)(s->dual_delay_ms / 100u + 1u);
 	st->rs_bcast_step = (uint8_t)(s->bcast_step + 1u);
 	settings_set_tones_off(st, s->tones_off);
+#if CONFIG_SIG_TONES
 	for (int i = 0; i < SIG_EV_COUNT; i++) {
 		st->sig_dmr[i] = s->sig_dmr[i];
 		st->sig_fm[i] = s->sig_fm[i];
-		for (unsigned k = 0; k < SIG_STEPS; k++) {
-			st->sig_step[i][k] = settings_sig_pack(s->sig_hz[i][k], s->sig_ms[i][k]);
-		}
 	}
+#endif
 	st->rs_stored = 1;
 	st->roam_rssi_dbm = s->roam_rssi_dbm;
 	st->roam_hyst_db = s->roam_hyst_db;
@@ -6628,7 +6624,9 @@ void radio_sm_poll(radio_sm_t *sm, uint32_t now_ms)
 		}
 		changed(sm);
 		// The channel is free again: the idle tone (a scan landing or a broadcast listen has none)
-		if (was_rx && !listening && sm->view.ch.mode == RADIO_MODE_FM && sig_local_on(sm, SIG_EV_IDLE)) {
+		// (not within a second of our own transmission: the end tone just played and the squelch tail is not a call)
+		if (was_rx && !listening && sm->view.ch.mode == RADIO_MODE_FM && now_ms - sm->tx_end_ms > 1000u &&
+		    sig_local_on(sm, SIG_EV_IDLE)) {
 			sig_local(sm, SIG_EV_IDLE);
 		}
 	}

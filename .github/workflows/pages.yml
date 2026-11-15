@@ -52,10 +52,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: The site, with those images in its flasher
+        env:
+          # the fork's build API (.github/fork-build/README.md): Settings > Secrets and variables > Actions > Variables
+          BUILD_API: ${{ vars.BUILD_API }}
         run: |
           set -eu
           python -m pip install -q -r site/requirements.txt
-          python site/build.py --strict --own-images --out build/site --firmware dist \
+          python site/build.py --strict --own-images --build-api "${BUILD_API:-}" --out build/site --firmware dist \
             --repo-url "https://github.com/${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

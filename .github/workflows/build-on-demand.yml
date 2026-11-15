@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 The RadioFoundry Authors
+#
+# Fork only: one custom firmware build for the web flasher, started by the fork's build API (.github/fork-build/worker.js)
+# with the radio and the features the user ticked. The image and its manifest go to a pre-release named build-<id>, which
+# the API serves back to the flasher. Old build-* releases are deleted (the newest 20 stay).
+name: Build on demand (fork)
+
+run-name: build ${{ inputs.id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: Board id
+        required: true
+      features:
+        description: Comma list of the switches that are on (no CONFIG_)
+        required: true
+      id:
+        description: Request id (letters and digits)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check the inputs
+        env:
+          BOARD: ${{ inputs.board }}
+          FEATURES: ${{ inputs.features }}
+          ID: ${{ inputs.id }}
+        run: |
+          set -eu
+          printf '%s' "$BOARD" | grep -Eq '^[a-z0-9_-]{1,40}$'
+          printf '%s' "$FEATURES" | grep -Eq '^[A-Z0-9_,]{0,2000}$'
+          printf '%s' "$ID" | grep -Eq '^[a-z0-9]{6,32}$'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: third_party submodules
+        run: tools/checkout-submodules.sh
+      - name: Toolchain (the C-SKY compiler of the hrc7000 platform)
+        id: tc
+        uses: ./.github/actions/toolchain
+        with:
+          toolchain: csky
+      - name: Build and package
+        env:
+          RUN: ${{ steps.tc.outputs.run }}
+          BOARD: ${{ inputs.board }}
+          FEATURES: ${{ inputs.features }}
+        run: |
+          set -eu
+          $RUN .github/fork-build/custom_build.sh "$BOARD" "$FEATURES" "dev-${GITHUB_SHA::8}" dist
+          ls -l dist
+      - name: Publish as a pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ID: ${{ inputs.id }}
+        run: |
+          set -eu
+          gh release create "build-$ID" dist/* --prerelease --title "build $ID" --notes "Custom build for the web flasher"
+          # keep the newest 20 build-* releases
+          gh release list --limit 200 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("build-"))] | sort_by(.createdAt) | reverse | .[20:] | .[].tagName' |
+            while read -r tag; do gh release delete "$tag" --cleanup-tag --yes; done

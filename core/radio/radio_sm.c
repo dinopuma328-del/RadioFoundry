@@ -1980,8 +1980,18 @@ static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 	if (sm->host_audio || sm->view.ch.no_beep || !sig_out_air(sig_out(sm, ev), ev)) {
 		return;
 	}
-	beep_seg_t seg[SIG_STEPS];
+	beep_seg_t seg[SIG_AIR_STEPS];
 	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
+	// A guard of silence on the outer side: before a start tone (the transmission's first frames), after an end tone
+	// (its last), where a lossy link such as a hotspot has been seen to clip
+	const beep_seg_t guard = { 0, SIG_AIR_GUARD_MS };
+	if (ev == SIG_EV_END) {
+		seg[n++] = guard;
+	} else {
+		memmove(&seg[1], &seg[0], n * sizeof seg[0]);
+		seg[0] = guard;
+		n++;
+	}
 	ambeVoiceTxTone(seg, n, ev == SIG_EV_END);
 #else
 	(void)sm;

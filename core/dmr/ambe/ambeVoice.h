@@ -88,7 +88,7 @@ void ambeVoiceSetMicGain(uint8_t step);
 // that changes pitch every 60 ms in place of the mic, so an over carries known, varying audio whatever the mic hears
 // (the HIL audio smoke test). Any task
 #if CONFIG_SIG_TONES
-// A tone sequence (up to SIG_STEPS steps of {Hz, ms}, sigtone.h) sent as voice in place of the mic: from the next block
+// A tone sequence (up to SIG_AIR_STEPS steps of {Hz, ms}, sigtone.h) sent as voice in place of the mic: from the next block
 // of the transmission, or from its first if it has not started. Encoded as a tone frame, noise reduction off for it.
 // final: after the tone the mic stays muted until the transmission ends (an end of transmission tone). The encoder
 // waits for room in its queue, so none of the tone is lost. Radio task. A request for a transmission that never

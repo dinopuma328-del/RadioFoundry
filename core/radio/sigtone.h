@@ -14,6 +14,9 @@
 #include "radio/beep.h"
 
 #define SIG_STEPS	10u	// ten: an eight tone ZVEI or a CPS call tone's five and some to spare
+#define SIG_AIR_GUARD_MS 60u	// silence the DMR on air copy carries before a start tone and after an end tone: a link that
+				// drops the first or last frames of a transmission (a hotspot) loses this instead of the tone
+#define SIG_AIR_STEPS	(SIG_STEPS + 1u)	// a chain and its guard
 #define SIG_MAX_MS	900u	// a sequence's total length is cut to this: it holds the transmission or the speaker (on air
 				// the call stack's tail hold is three superframes, about 1.08 s)
 
@@ -91,7 +94,7 @@ void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN]);
 
 // Sample generator (8 kHz mono, phase continuous across steps, 2 ms fades at each step's edges)
 typedef struct {
-	beep_seg_t seg[SIG_STEPS];
+	beep_seg_t seg[SIG_AIR_STEPS];
 	uint8_t n, i;
 	uint32_t left;		// samples left in the step
 	uint32_t len;		// samples in the step

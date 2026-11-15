@@ -526,9 +526,16 @@ options are put back after it. AMBE is a speech codec: a steady tone passes, a s
 specified here. A start tone is sent with the host's audio (USRP) never, and a start tone longer than the encoder queue
 can hold waits for the call stack, which delays the voice that much. The tone counts in the TX time-out.
 
+The DMR on air copy carries `SIG_AIR_GUARD_MS` (60 ms) of silence on its outer side: before a start tone, after an end tone. A
+link that drops the first or last frames of a transmission (a hotspot, a repeater that opens late) then loses the
+silence and not the tone. The guard counts in the tone's length for the tail hold: 900 ms and its guard are inside the
+three superframes (1080 ms) the over is held for.
+
 On the speaker the start tone follows the board: a board with `CAP_BEEP_NOT_ON_AIR` plays a DMR start tone before keying,
 in the talk permit's hold (`permit_before_key`), and plays no FM start tone on the speaker (it cannot beep while it transmits). The end
-tone plays once the transmitter is off.
+tone plays once the transmitter is off, and on a board whose audio path is closed while the DMR engine sends its last burst
+(`hal_audio_t.speaker_blocked`) a little after that: audio queued while the path is closed is dropped when it opens, so the
+core waits for it, at most `DMR_END_WAIT_MS` (400 ms), and then plays it whole.
 
 
 ## 5. Power

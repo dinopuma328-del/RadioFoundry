@@ -253,6 +253,7 @@ static const hal_audio_tap_t fake_tap = { .caps = AUDIO_TAP_FM_RX | AUDIO_TAP_FM
 static bool v_present(void) { return true; }
 static void v_reset(void) {}
 static unsigned v_enc_blocks, v_enc_tone;	// frames encoded, and those whose samples are not the (silent) mic's: a tone
+static unsigned v_enc_first, v_enc_last;	// the first and last of them, 1 + their index among the frames (0: none)
 static void v_encode(const int16_t *pcm, uint8_t *bits)
 {
 	bool sound = false;
@@ -261,6 +262,10 @@ static void v_encode(const int16_t *pcm, uint8_t *bits)
 	}
 	v_enc_blocks++;
 	v_enc_tone += sound;
+	if (sound) {
+		v_enc_first = v_enc_first != 0 ? v_enc_first : v_enc_blocks;
+		v_enc_last = v_enc_blocks;
+	}
 	memset(bits, 0, VOCODER_BITS);
 }
 static void v_decode(const uint8_t *bits, int16_t *pcm) { (void)bits; memset(pcm, 0, VOCODER_FRAME_SAMPLES * 2); }
@@ -492,7 +497,7 @@ static void start(void)
 	memset(&hw, 0, sizeof(hw));
 	hw.battery_mv = 8000;
 	hw.has_tx_tone = true;
-	v_enc_blocks = v_enc_tone = 0;
+	v_enc_blocks = v_enc_tone = v_enc_first = v_enc_last = 0;
 	beep_reset_stats();
 	setup_codeplug();
 	now = 1000;
@@ -3901,6 +3906,8 @@ static void test_sig_dmr_air(void)
 	req(RREQ_PTT, 1);
 	run(600);
 	CHECK(sm.view.dmr.state == RDMR_TX && v_enc_tone == 3);
+	// ... after the guard: the 60 ms of silence ahead of it are three frames the encoder took before the tone
+	CHECK(v_enc_last - v_enc_first == 2 && v_enc_first > SIG_AIR_GUARD_MS / 20);
 	beep_get_stats(&b1);
 	CHECK(b1.played == b0.played);
 	req(RREQ_PTT, 0);
@@ -3920,6 +3927,8 @@ static void test_sig_dmr_air(void)
 	ambe_voice_stats_t vs;
 	ambeVoiceGetStats(&vs);
 	CHECK(sm.view.state == RS_IDLE && v_enc_tone == 6 && vs.tx_overflows == 0 && !ambeVoiceTxToneBusy());
+	// ... and the guard's silence after it is encoded too (the transmission ends after it, not with the tone)
+	CHECK(v_enc_blocks >= v_enc_last + SIG_AIR_GUARD_MS / 20);
 
 	// Both: the speaker has its copy of each too
 	start();

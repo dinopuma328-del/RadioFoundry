@@ -63,7 +63,7 @@ static bool test_signal;		// ambeVoiceSetTestSignal
 #if CONFIG_SIG_TONES
 // A tone sequence sent in place of the mic (ambeVoiceTxTone): the request is handed over from the radio task with a
 // sequence counter; the rest is the audio callback's, but for tone_last_*, which the call task reads (busy)
-static beep_seg_t tone_req_seg[SIG_STEPS];
+static beep_seg_t tone_req_seg[SIG_AIR_STEPS];
 static uint8_t tone_req_n;
 static bool tone_req_final;
 static uint8_t tone_req_seq, cb_tone_seq;
@@ -631,8 +631,8 @@ void ambeVoiceSetMixer(ambe_voice_mixer_t m)
 #if CONFIG_SIG_TONES
 void ambeVoiceTxTone(const beep_seg_t *steps, uint8_t n, bool final)
 {
-	if (n > SIG_STEPS) {
-		n = SIG_STEPS;
+	if (n > SIG_AIR_STEPS) {
+		n = SIG_AIR_STEPS;
 	}
 	if (steps != NULL && n != 0) {
 		memcpy(tone_req_seg, steps, n * sizeof(beep_seg_t));

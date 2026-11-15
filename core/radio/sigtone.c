@@ -121,8 +121,8 @@ static void load_step(sig_gen_t *g)
 void sig_gen_start(sig_gen_t *g, const beep_seg_t *s, uint8_t n, int32_t amp_q15)
 {
 	memset(g, 0, sizeof(*g));
-	if (n > SIG_STEPS) {
-		n = SIG_STEPS;
+	if (n > SIG_AIR_STEPS) {
+		n = SIG_AIR_STEPS;
 	}
 	memcpy(g->seg, s, n * sizeof(beep_seg_t));
 	g->n = n;

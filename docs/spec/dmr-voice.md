@@ -244,7 +244,7 @@ codec bits.
 
 ### 6.1 A tone in place of the microphone
 
-`ambeVoiceTxTone` (`ambeVoice.h`, radio task) hands the audio callback a tone sequence of up to `SIG_STEPS` steps
+`ambeVoiceTxTone` (`ambeVoice.h`, radio task) hands the audio callback a tone sequence of up to `SIG_AIR_STEPS` steps (`SIG_STEPS` and a guard of silence, `SIG_AIR_GUARD_MS`)
 ([radio-features.md](radio-features.md) 4.3). From the next block of a transmission (the first, if it has not started)
 the encoder gets the generated tone instead of the microphone, after the mic gain. While it plays the encode options are
 `VOCODER_OPT_TONE_FRAMES` set and `VOCODER_OPT_NOISE_REDUCTION` cleared, and the options in force come back after it.

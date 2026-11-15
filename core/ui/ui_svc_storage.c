@@ -292,10 +292,10 @@ int32_t ui_svc_setting_get(uint8_t id)
 		return rs.sig_fm[id - UI_SET_SIG_FM];
 	case UI_SET_SIG_HZ ... UI_SET_SIG_HZ_LAST:
 		radio_get_settings(&rs);
-		return rs.sig_hz[(id - UI_SET_SIG_HZ) / 5][(id - UI_SET_SIG_HZ) % 5];
+		return rs.sig_hz[(id - UI_SET_SIG_HZ) / SIG_STEPS][(id - UI_SET_SIG_HZ) % SIG_STEPS];
 	case UI_SET_SIG_MS ... UI_SET_SIG_MS_LAST:
 		radio_get_settings(&rs);
-		return (int32_t)rs.sig_ms[(id - UI_SET_SIG_MS) / 5][(id - UI_SET_SIG_MS) % 5] * 10;
+		return (int32_t)rs.sig_ms[(id - UI_SET_SIG_MS) / SIG_STEPS][(id - UI_SET_SIG_MS) % SIG_STEPS] * 10;
 	case UI_SET_CALL_END_TONE:
 	case UI_SET_TOT_WARN_TONE:
 	case UI_SET_BATTERY_TONE:
@@ -991,8 +991,8 @@ static sig_event_t sig_event_of(uint8_t id, int32_t value)
 		ev = (id - UI_SET_SIG_HZ) / SIG_STEPS;
 	else if (id >= UI_SET_SIG_MS && id <= UI_SET_SIG_MS_LAST)
 		ev = (id - UI_SET_SIG_MS) / SIG_STEPS;
-	else if (id == UI_SET_SIG_STEP && ((uint32_t)value >> 18 & 7u) < SIG_STEPS)
-		ev = (uint32_t)value >> 21 & 3u;
+	else if (id == UI_SET_SIG_STEP && ((uint32_t)value >> 19 & 15u) < SIG_STEPS)
+		ev = (uint32_t)value >> 23 & 3u;
 	return ev < SIG_EV_COUNT ? (sig_event_t)ev : SIG_EV_COUNT;
 }
 
@@ -1009,9 +1009,9 @@ static void sig_change(sig_rec_t *r, uint8_t id, int32_t value)
 	} else if (id >= UI_SET_SIG_MS && id <= UI_SET_SIG_MS_LAST) {
 		r->ms10[(id - UI_SET_SIG_MS) % SIG_STEPS] = (uint8_t)(x / SIG_MS_UNIT > 255u ? 255u : x / SIG_MS_UNIT);
 	} else if (id == UI_SET_SIG_STEP) {
-		unsigned k = x >> 18 & 7u;
+		unsigned k = x >> 19 & 15u;
 		r->hz[k] = (uint16_t)(x & 0xFFFu);
-		r->ms10[k] = (uint8_t)(x >> 12 & 0x3Fu);
+		r->ms10[k] = (uint8_t)(x >> 12 & 0x7Fu);
 	}
 }
 

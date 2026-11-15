@@ -1669,7 +1669,7 @@
  "editor.field.sigBegin": "开始音",
  "editor.field.sigEnd": "结束音",
  "editor.field.sigIdle": "空闲音",
- "editor.problem.sig_range": "{field}的频率超过 {hz} Hz、时长超过 {ms} 毫秒或不是 10 毫秒的整数倍，或包含该事件没有的输出。",
+ "editor.problem.sig_range": "{field}的频率超过 {hz} Hz 或不是 10 Hz 的整数倍、时长超过 {ms} 毫秒或不是 10 毫秒的整数倍，或包含该事件没有的输出。",
  "editor.general.not_set": "未设置",
  "editor.general.on": "开",
  "editor.general.off": "关",

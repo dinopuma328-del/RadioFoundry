@@ -171,22 +171,25 @@ change that needs it, never by moving the first.
 ### 3.3 The signaling tone records
 
 One record per event, because a chain's steps are only valid together and the outputs go with the event they sound
-for. 17 bytes, little endian:
+for. 32 bytes, little endian (the first version's record had five steps and 17 bytes: the first five steps are laid out as
+it had them, and the other five follow):
 
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | Output in DMR: 0 the radio's own sound, 1 off, 2 speaker, 3 on air, 4 speaker and on air |
 | 1 | 1 | Output in FM, the same values |
-| 2 | 10 | Five frequencies in Hz, u16 each; 0 is a pause. At most 3400 |
-| 12 | 5 | Five lengths in units of 10 ms, one per step. A step of length 0 ends the chain, and a chain with no step is the event's own sound. At most 60 (600 ms) |
+| 2 | 10 | Frequencies of steps 1 to 5 in Hz, u16 each; 0 is a pause. Multiples of 10, at most 3400 |
+| 12 | 5 | Lengths of steps 1 to 5 in units of 10 ms. A step of length 0 ends the chain, and a chain with no step is the event's own sound. At most 90 (900 ms) |
+| 17 | 10 | Frequencies of steps 6 to 10, as above |
+| 27 | 5 | Lengths of steps 6 to 10, as above |
 
-- A record shorter than 17 bytes reads with the missing fields zero. A longer one (a later version) is read from the
+- A record shorter than 32 bytes (the first version's 17, say) reads with the missing fields zero. A longer one (a later version) is read from the
   front.
 - The record is absent for the reader when a field is outside what the setting takes: an output of 3 or 4 for the end
-  of a reception, a frequency over 3400 Hz or a length over 600 ms. Nothing is
+  of a reception, a frequency over 3400 Hz or not a multiple of 10, or a length over 900 ms. Nothing is
   clamped (3.1).
 - A record whose key is present holds over the radio's own copy (5.2). The radio writes the whole record when one of
-  its fields changes from the menu, and keeps the bytes after the 17th (4).
+  its fields changes from the menu, and keeps the bytes after the 32nd (4).
 
 ## 4. Rules for readers and writers
 

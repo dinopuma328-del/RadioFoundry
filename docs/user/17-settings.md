@@ -212,25 +212,25 @@ pick where the tone sounds, and you build the tone yourself, step by step.
 
 The idle tone has no On air choice: nothing is sent at that moment. An FM start tone on air plays right after the radio keys, before your voice goes out; let go of PTT and it stops.
 
-**The tone itself** is a chain of up to five steps per event, like the Frequency and Period rows of a CPS alert tone
+**The tone itself** is a chain of up to ten steps per event, like the Frequency and Period rows of a CPS alert tone
 page. The rows **Start tone steps**, **End tone steps** and **Idle tone steps** show how many steps each chain has
-("Standard" when it has none) and open its five steps:
+("Standard" when it has none) and open its ten steps:
 
 | Step | Shown as | Values |
 |---|---|---|
 | Frequency | `1570 Hz` | 0 to 3400, in steps of 10. 0 is a pause |
-| Length | `40 ms` | 0 to 600, in steps of 10. 0 ends the chain: later steps are ignored |
+| Length | `40 ms` | 0 to 900, in steps of 10. 0 ends the chain: later steps are ignored |
 
 To set a step, press **OK** on it, type the frequency with the keypad (`1 5 7 0`) or step it with Up and Down, press
 **OK**, then do the same for the length and press **OK** again. **Back** leaves the step as it was. A number off the
 steps or out of the range is refused and the message says what fits. A step that was off starts at 40 ms. The whole
-chain is cut at 600 ms; the line above the steps shows the length so far. With no step the event plays its **standard
+chain is cut at 900 ms; the line above the steps shows the length so far. With no step the event plays its **standard
 sound** (the permit beep at the start, the call end beep at the end and when idle). The FM end tone is how you get a roger beep from the menu: set it to On air (or Speaker + air); to match the roger beep exactly, set End tone steps to 1200 Hz 100 ms and 900 Hz 100 ms. To copy a CPS call tone of 0, 1570,
-1050, 1570 and 1320 Hz at 40 ms each, set Start tone steps 1 to 5 to those pairs.
+1050, 1570 and 1320 Hz at 40 ms each, set Start tone steps 1 to 5 to those pairs. A five tone or ZVEI-style selective call of up to ten tones fits the same way: one step per tone, for example 70 ms each.
 
 - The tones are also saved in the codeplug, so the Codeplug Editor shows them under **Radio > Signaling tones**, and a
   codeplug written to the radio sets them. In the editor each event is **Not set** (the radio keeps its own setting) or
-  **Set**, with the two outputs and the five steps. A change from the radio's menu is written to the codeplug as well.
+  **Set**, with the two outputs and the ten steps. A change from the radio's menu is written to the codeplug as well.
 - The start tone on air goes in front of your voice, which starts a little later. The end tone on air goes after you
   let go of **PTT**, and the radio stays on the air for it (up to about one second) before it ends the transmission.
 - A channel with **Talk permit beeps** off has none of these tones.

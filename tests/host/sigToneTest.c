@@ -59,17 +59,26 @@ static void test_chain(void)
 	n = sig_chain(eh, zm, SIG_EV_END, s);
 	CHECK(n == 3 && s[0].hz == 1200);
 
-	// a frequency above the band is cut, and so is the total length (5 x 255 x 10 ms would be 12.7 s)
+	// a frequency above the band is cut, and so is the total length (10 x 255 x 10 ms would be 25 s)
 	static const uint16_t bh[SIG_STEPS] = { 9000, 1000, 1000, 1000, 1000 };
-	static const uint8_t bm[SIG_STEPS] = { 255, 255, 255, 255, 255 };
+	static const uint8_t bm[SIG_STEPS] = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
 	n = sig_chain(bh, bm, SIG_EV_END, s);
 	CHECK(n == 1 && s[0].hz == SIG_HZ_MAX && sig_total_ms(s, n) == SIG_MAX_MS);
-	static const uint8_t cm[SIG_STEPS] = { 30, 30, 30, 30, 30 };	// 300 ms each: the second fills the 600 ms
+	static const uint8_t cm[SIG_STEPS] = { 30, 30, 30, 30, 30 };	// 300 ms each: the third fills the 900 ms
 	n = sig_chain(bh, cm, SIG_EV_END, s);
-	CHECK(n == 2 && s[0].ms == 300 && s[1].ms == 300 && sig_total_ms(s, n) == SIG_MAX_MS);
-	static const uint8_t dm[SIG_STEPS] = { 40, 30, 20, 10, 10 };	// 400, then 200 of the next 300
+	CHECK(n == 3 && s[0].ms == 300 && s[2].ms == 300 && sig_total_ms(s, n) == SIG_MAX_MS);
+	static const uint8_t dm[SIG_STEPS] = { 50, 30, 20, 10, 10 };	// 500, 300, then 100 of the next 200
 	n = sig_chain(bh, dm, SIG_EV_END, s);
-	CHECK(n == 2 && s[0].ms == 400 && s[1].ms == 200);
+	CHECK(n == 3 && s[0].ms == 500 && s[1].ms == 300 && s[2].ms == 100);
+
+	// an eight tone ZVEI key at 70 ms each fits, and ten steps of 90 ms are the whole 900
+	static const uint16_t zh[SIG_STEPS] = { 1830, 2200, 1830, 1400, 1270, 1670, 1160, 1060, 0, 0 };
+	static const uint8_t zm8[SIG_STEPS] = { 7, 7, 7, 7, 7, 7, 7, 7, 0, 0 };
+	n = sig_chain(zh, zm8, SIG_EV_BEGIN, s);
+	CHECK(n == 8 && s[7].hz == 1060 && sig_total_ms(s, n) == 560);
+	static const uint8_t tm[SIG_STEPS] = { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+	n = sig_chain(zh, tm, SIG_EV_BEGIN, s);
+	CHECK(n == 10 && sig_total_ms(s, n) == SIG_MAX_MS);
 }
 
 // Zero crossings of a block: about 2 * hz * seconds
@@ -84,19 +93,22 @@ static int crossings(const int16_t *p, int n)
 	return c;
 }
 
-// The settings area's record (docs/spec/codeplug-settings.md 3): outputs first, then five frequencies (u16 little endian)
-// and five lengths. Short reads zero-filled, long from the front, what the setting can't take reads as absent
+// The settings area's record (docs/spec/codeplug-settings.md 3): outputs first, then the first five frequencies (u16 little endian)
+// and five lengths, then the other five of each (the first version's layout is the front of this one). Short reads zero-filled, long from the front, what the setting can't take reads as absent
 static void test_rec(void)
 {
-	sig_rec_t r = { SIG_OUT_BOTH, SIG_OUT_LOCAL, { 1600, 0, 800, 3400, 1 }, { 5, 0, 7, 60, 1 } }, d;
+	sig_rec_t r = { SIG_OUT_BOTH, SIG_OUT_LOCAL, { 1600, 0, 800, 3400, 10, 1060, 0, 0, 0, 2200 }, { 5, 0, 7, 60, 1, 7, 0, 0, 0, 9 } }, d;
 	uint8_t b[SIG_REC_LEN + 4] = { 0 };
-	CHECK(SIG_REC_LEN == 17);
+	CHECK(SIG_REC_LEN == 32);
 	sig_rec_encode(&r, b);
 	CHECK(b[0] == SIG_OUT_BOTH && b[1] == SIG_OUT_LOCAL && b[2] == (1600 & 0xFF) && b[3] == (1600 >> 8) &&
 	      b[2 + 4] == (800 & 0xFF) && b[2 + 10] == 5 && b[2 + 10 + 3] == 60);
 	CHECK(sig_rec_decode(b, SIG_REC_LEN, SIG_EV_END, &d) && d.dmr == SIG_OUT_BOTH && d.fm == SIG_OUT_LOCAL &&
 	      d.hz[0] == 1600 && d.hz[3] == 3400 && d.ms10[2] == 7 && d.ms10[3] == 60);
-	CHECK(sig_rec_decode(b, SIG_REC_LEN + 4, SIG_EV_END, &d) && d.hz[4] == 1);	// a later version's longer record
+	CHECK(sig_rec_decode(b, SIG_REC_LEN + 4, SIG_EV_END, &d) && d.hz[4] == 10 && d.hz[5] == 1060 && d.hz[9] == 2200 &&
+	      d.ms10[5] == 7 && d.ms10[9] == 9);	// a later version's longer record, and the steps 6 to 10
+	// The first version's record (five steps, 17 bytes) reads as it did, with the other five empty
+	CHECK(sig_rec_decode(b, 17, SIG_EV_END, &d) && d.hz[3] == 3400 && d.ms10[3] == 60 && d.hz[5] == 0 && d.ms10[9] == 0);
 	CHECK(sig_rec_decode(b, 2, SIG_EV_END, &d) && d.dmr == SIG_OUT_BOTH && d.hz[0] == 0 && d.ms10[0] == 0);	// short
 	CHECK(!sig_rec_decode(b, 0, SIG_EV_END, &d));
 	uint8_t c[SIG_REC_LEN];
@@ -114,7 +126,11 @@ static void test_rec(void)
 	c[3] = 0x20;	// 8192 Hz
 	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
 	memcpy(c, b, sizeof c);
-	c[2 + 10 + 1] = 61;	// a length over the limit
+	c[2] = 1573 & 0xFF;	// a frequency off the 10 Hz grid
+	c[3] = 1573 >> 8;
+	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
+	memcpy(c, b, sizeof c);
+	c[2 + 10 + 1] = 91;	// a length over the limit
 	CHECK(!sig_rec_decode(c, SIG_REC_LEN, SIG_EV_END, &d));
 }
 

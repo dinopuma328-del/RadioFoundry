@@ -39,7 +39,7 @@ quick changes therefore never reads back a value from before its own last change
 | `key_beep` | on | `radio_req_beep(BEEP_KEY)` sounds |
 | `talk_permit` | on | DMR: the talk permit tone when the voice goes on air, or just before on boards with `CAP_BEEP_NOT_ON_AIR` (4) (stored as `SETTINGS_RS_NO_TALK_PERMIT` in `rs_flags`, 0 = on) |
 | `sig_dmr[3]`, `sig_fm[3]` | default | signaling tones (4.3): where the start of transmission, end of transmission and reception end tones sound, in DMR and in FM: default, off, speaker, on air, speaker + air |
-| `sig_hz[3][5]`, `sig_ms[3][5]` | none | signaling tones: each event's chain of five steps, a frequency in Hz and a length in 10 ms (a step of length 0 ends the chain; no step = the event's standard sound) |
+| `sig_hz[3][10]`, `sig_ms[3][10]` | none | signaling tones: each event's chain of ten steps, a frequency in Hz (a multiple of 10) and a length in 10 ms (a step of length 0 ends the chain; no step = the event's standard sound) |
 | `vox` | off | off, on channels whose codeplug entry allows it, on every FM channel (CONFIG_VOX) |
 | `vox_level` | 5 | sensitivity 1 (loud voice needed) to 10 |
 | `vox_tail_ms` | 1500 | stays keyed this long after the voice stops |
@@ -366,7 +366,7 @@ None of them needs a correction in the driver. The HIL test (`test_fm_tx_dtmf`) 
 | TOT warning | 1000 Hz 100 ms twice | 3.2, unless Settings > Sound > TOT warning tone is off (settings area key 0x0004) |
 | battery low | 800 Hz, 600 Hz | entering low, then every 2 min, unless Settings > Sound > Battery tone is off (settings area key 0x0005) |
 | battery critical | 600 Hz three times | entering critical, then every 30 s; the same setting as battery low |
-| custom | up to 5 steps, 600 ms | a signaling tone on the speaker (4.3); not a fixed pattern: it has no entry in the pattern table or the beep reel |
+| custom | up to 10 steps, 900 ms | a signaling tone on the speaker (4.3); not a fixed pattern: it has no entry in the pattern table or the beep reel |
 | scan hold | 1400 Hz 40 ms | the scan stops on a signal, if `scan_beep` (Settings > Sound > Scan stop tone, off by default) |
 | emergency | 1500 / 900 Hz warble, 6 x 160 ms | someone's emergency heard (alarm or emergency call), if the emergency setting's tone is on (Settings > Sound > Emergency tone, `dmr-emergency.md`) |
 | message | 1000, 1300, 1700 Hz rising, 60-90 ms each | a text message arrived: the UI asks for it (`radio_req_beep(BEEP_MESSAGE)`) when Settings > Sound > Message tone is on |
@@ -485,7 +485,7 @@ the radio. No new view field: `follow_volume` already filters the knob (2 %, the
 ### 4.3 Signaling tones (CONFIG_SIG_TONES)
 
 Short tone sequences at three events, on the speaker, on air or both, set separately for DMR and for FM
-(`core/radio/sigtone.h`, Settings > Sound). Each sequence is up to 5 steps of `{Hz, ms}` (`SIG_STEPS`), at most 600 ms in
+(`core/radio/sigtone.h`, Settings > Sound). Each sequence is up to 10 steps of `{Hz, ms}` (`SIG_STEPS`), at most 900 ms in
 all (`SIG_MAX_MS`), a pause being a step of 0 Hz: the shape of the rows of a CPS alert tone page.
 
 | Event | Where it fires | Default (the output setting 0) |
@@ -501,9 +501,9 @@ on air plays right after the transmitter keys (`fm_lead_start`, on the `roger_se
 microphone goes live when it ends; releasing the PTT during it cancels it. A board without `tx_tone` sends none. A channel with "no beep" has none of
 the speaker or on air copies. The tones on the speaker are the `BEEP_CUSTOM` pattern of `beep.c` (`beep_play_custom`:
 two copies of the steps alternate, so a pattern still playing is not rewritten), and a *default* output keeps the fixed
-beeps and their Settings > Sound switches (the FM roger beep has none: `roger_beep` is set over the debug link). The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (5) steps, each a frequency (0 = a pause, up to
-`SIG_HZ_MAX`, 3400 Hz) and a length (multiples of 10 ms), the same shape as the Frequency / Period rows of a CPS alert
-tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG_MAX_MS` (600 ms). A chain with no step
+beeps and their Settings > Sound switches (the FM roger beep has none: `roger_beep` is set over the debug link). The sound is the event's chain (`sig_chain`): up to `SIG_STEPS` (10) steps, each a frequency (0 = a pause, up to
+`SIG_HZ_MAX`, 3400 Hz, a multiple of `SIG_HZ_UNIT`, 10 Hz) and a length (multiples of 10 ms), the same shape as the Frequency / Period rows of a CPS alert
+tone page. A step of length 0 ends the chain, and the whole chain is cut to `SIG_MAX_MS` (900 ms: on air the call stack holds the over open for three superframes, about 1.08 s). A chain with no step
 is the event's standard sound (the permit beep at the start, the call end beep otherwise). Settings > Signaling tones
 edits the three chains in `settings_t` (the `sig-chain` screen, [ui.md](ui.md) 2): nothing is built in beyond that standard
 sound.

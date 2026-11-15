@@ -3994,8 +3994,8 @@ static void test_ui_glue(void)
 	for (int ev = 0; ev < SIG_EV_COUNT; ev++) {
 		CHECK(ui_svc_setting_get((uint8_t)(UI_SET_SIG_DMR + ev)) == SIG_OUT_DEFAULT &&
 		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_FM + ev)) == SIG_OUT_DEFAULT &&
-		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_HZ + 5 * ev)) == 0 &&
-		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_MS + 5 * ev)) == 0);
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_HZ + 10 * ev)) == 0 &&
+		      ui_svc_setting_get((uint8_t)(UI_SET_SIG_MS + 10 * ev)) == 0);
 	}
 	radio_settings_t sr;
 	radio_get_settings(&sr);
@@ -4016,12 +4016,12 @@ static void test_ui_glue(void)
 	      sm.set.sig_hz[SIG_EV_END][2] == SIG_HZ_MAX && sm.set.sig_ms[SIG_EV_END][2] == SIG_MAX_MS / SIG_MS_UNIT &&
 	      sm.set.sig_ms[SIG_EV_IDLE][0] == 0);
 	CHECK(ui_svc_setting_get(UI_SET_SIG_DMR + SIG_EV_BEGIN) == SIG_OUT_BOTH &&
-	      ui_svc_setting_get(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1) == 1570 &&
-	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 1) == 40 &&
-	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 2) == (int32_t)SIG_MAX_MS);
+	      ui_svc_setting_get(UI_SET_SIG_HZ + 10 * SIG_EV_END + 1) == 1570 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 10 * SIG_EV_END + 1) == 40 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 10 * SIG_EV_END + 2) == (int32_t)SIG_MAX_MS);
 	settings_read(&sv);
 	CHECK(sv.sig_dmr[SIG_EV_BEGIN] == SIG_OUT_BOTH && sv.sig_fm[SIG_EV_END] == SIG_OUT_AIR &&
-	      sv.sig_hz[SIG_EV_END][1] == 1570 && sv.sig_ms[SIG_EV_END][1] == 4 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
+	      settings_sig_hz(sv.sig_step[SIG_EV_END][1]) == 1570 && settings_sig_ms10(sv.sig_step[SIG_EV_END][1]) == 4 && sv.sig_dmr[SIG_EV_IDLE] == SIG_OUT_DEFAULT);
 	memset(sr.sig_dmr, 0, sizeof sr.sig_dmr);
 	memset(sr.sig_fm, 0, sizeof sr.sig_fm);
 	memset(sr.sig_hz, 0, sizeof sr.sig_hz);
@@ -4036,19 +4036,19 @@ static void test_ui_glue(void)
 	storage_job_poll();
 	run(20);
 	CHECK(kv_sig_len[SIG_EV_END] == SIG_REC_LEN && kv_sig[SIG_EV_END][2 + 2] == (1570 & 0xFF) &&
-	      kv_sig[SIG_EV_END][3 + 2] == (1570 >> 8) && kv_sig[SIG_EV_END][2 + 2 * SIG_STEPS + 1] == 4);
+	      kv_sig[SIG_EV_END][3 + 2] == (1570 >> 8) && kv_sig[SIG_EV_END][2 + 2 * SIG_REC_BASE + 1] == 4);
 	CHECK(kv_sig_len[SIG_EV_BEGIN] < 0 && sm.set.sig_hz[SIG_EV_END][1] == 1570 && sm.set.sig_ms[SIG_EV_END][1] == 4 &&
-	      ui_svc_setting_get(UI_SET_SIG_HZ + 5 * SIG_EV_END + 1) == 1570 &&
-	      ui_svc_setting_get(UI_SET_SIG_MS + 5 * SIG_EV_END + 1) == 40);
+	      ui_svc_setting_get(UI_SET_SIG_HZ + 10 * SIG_EV_END + 1) == 1570 &&
+	      ui_svc_setting_get(UI_SET_SIG_MS + 10 * SIG_EV_END + 1) == 40);
 	CHECK(ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_END, SIG_OUT_BOTH));
 	storage_job_poll();
 	run(20);
 	settings_read(&sv);
 	CHECK(kv_sig[SIG_EV_END][0] == SIG_OUT_BOTH && sm.set.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH &&
-	      sv.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH && sv.sig_hz[SIG_EV_END][1] == 1570);
+	      sv.sig_dmr[SIG_EV_END] == SIG_OUT_BOTH && settings_sig_hz(sv.sig_step[SIG_EV_END][1]) == 1570);
 	// What the setting can't take is refused, with no job
 	CHECK(!ui_svc_setting_set(UI_SET_SIG_FM + SIG_EV_IDLE, SIG_OUT_AIR) && !ui_svc_setting_set(UI_SET_SIG_DMR + SIG_EV_IDLE, SIG_OUT_BOTH) &&
-	      !ui_svc_setting_set(UI_SET_SIG_STEP, UI_SIG_STEP(SIG_EV_END, 7, 800, 40)) && !ui_svc_setting_set(UI_SET_SIG_HZ, 9000) &&
+	      !ui_svc_setting_set(UI_SET_SIG_STEP, UI_SIG_STEP(SIG_EV_END, 12, 800, 40)) && !ui_svc_setting_set(UI_SET_SIG_HZ, 9000) &&
 	      !storage_job_busy());
 	// A record a CPS wrote holds over the radio's own copy, which follows it: a short one (the outputs only) leaves the
 	// chain empty, a longer one (a later version) is read from the front, and one the setting can't take is ignored
@@ -4066,7 +4066,7 @@ static void test_ui_glue(void)
 	kv_sig[SIG_EV_IDLE][0] = SIG_OUT_LOCAL;
 	kv_sig[SIG_EV_IDLE][2] = 800 & 0xFF;
 	kv_sig[SIG_EV_IDLE][3] = 800 >> 8;
-	kv_sig[SIG_EV_IDLE][2 + 2 * SIG_STEPS] = 6;
+	kv_sig[SIG_EV_IDLE][2 + 2 * SIG_REC_BASE] = 6;
 	kv_serial++;
 	run(20);
 	CHECK(sm.set.sig_dmr[SIG_EV_IDLE] == SIG_OUT_LOCAL && sm.set.sig_hz[SIG_EV_IDLE][0] == 800 && sm.set.sig_ms[SIG_EV_IDLE][0] == 6);
@@ -5253,7 +5253,7 @@ static void test_factory_reset(void)
 	CHECK(settings_flush());
 	n_ev = 0;
 	CHECK(ui_svc_factory_reset());
-	sim_flash_cut_after(488);	// the settings records (page 1: 212 + 4 bytes, page 0: 252 + 4, rounded up as the sizes are) go in, the native erase fails
+	sim_flash_cut_after(504);	// the settings records (page 1: 228 + 4 bytes, page 0: 252 + 4, rounded up as the sizes are) go in, the native erase fails
 	storage_job_poll();
 	sim_flash_power_on();
 	CHECK(n_ev == 1 && strstr(last_ev.text, "native") != NULL);

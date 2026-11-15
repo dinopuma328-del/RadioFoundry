@@ -1669,7 +1669,7 @@
  "editor.field.sigBegin": "start tone",
  "editor.field.sigEnd": "end tone",
  "editor.field.sigIdle": "idle tone",
- "editor.problem.sig_range": "The {field} has a frequency over {hz} Hz, a length over {ms} ms or not in steps of 10 ms, or an output that event doesn't have.",
+ "editor.problem.sig_range": "The {field} has a frequency over {hz} Hz or not in steps of 10 Hz, a length over {ms} ms or not in steps of 10 ms, or an output that event doesn't have.",
  "editor.general.not_set": "Not set",
  "editor.general.on": "On",
  "editor.general.off": "Off",

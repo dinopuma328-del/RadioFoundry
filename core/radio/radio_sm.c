@@ -193,7 +193,9 @@ static void beep(radio_sm_t *sm, uint8_t b)
 // --- Signaling tones (sigtone.h, docs/spec/radio-features.md 4.4) ---
 
 _Static_assert(SIG_EV_COUNT == 3, "radio_settings_t.sig_* hold three events");
-_Static_assert(SIG_STEPS == 5, "radio_settings_t.sig_hz / sig_ms hold five steps");
+_Static_assert(SIG_STEPS == 10, "radio_settings_t.sig_hz / sig_ms hold ten steps");
+_Static_assert(SIG_MAX_MS / SIG_MS_UNIT < 128, "a step's length is 7 bits in settings_t.sig_step");
+_Static_assert(SIG_HZ_MAX / SIG_HZ_UNIT < 512, "a step's frequency is 9 bits in settings_t.sig_step");
 
 // Where the event's tone goes on this channel's mode (sig_out_t)
 static uint8_t sig_out(const radio_sm_t *sm, sig_event_t ev)
@@ -4930,6 +4932,7 @@ static void clamp_settings(radio_settings_t *s)
 			if (s->sig_hz[i][k] > SIG_HZ_MAX) {
 				s->sig_hz[i][k] = SIG_HZ_MAX;
 			}
+			s->sig_hz[i][k] = (uint16_t)(s->sig_hz[i][k] / SIG_HZ_UNIT * SIG_HZ_UNIT);
 			if (s->sig_ms[i][k] > SIG_MAX_MS / SIG_MS_UNIT) {
 				s->sig_ms[i][k] = SIG_MAX_MS / SIG_MS_UNIT;
 			}
@@ -5026,8 +5029,8 @@ static void settings_to_radio(const settings_t *st, radio_settings_t *s)
 		s->sig_dmr[i] = st->sig_dmr[i];	// 0 = default, in a record from before them; clamp_settings checks
 		s->sig_fm[i] = st->sig_fm[i];
 		for (unsigned k = 0; k < SIG_STEPS; k++) {
-			s->sig_hz[i][k] = st->sig_hz[i][k];
-			s->sig_ms[i][k] = st->sig_ms[i][k];
+			s->sig_hz[i][k] = settings_sig_hz(st->sig_step[i][k]);
+			s->sig_ms[i][k] = settings_sig_ms10(st->sig_step[i][k]);
 		}
 	}
 	if (st->rs_stored != 1) {
@@ -5090,8 +5093,7 @@ static void radio_to_settings(const radio_settings_t *s, uint32_t now_ms)
 		st->sig_dmr[i] = s->sig_dmr[i];
 		st->sig_fm[i] = s->sig_fm[i];
 		for (unsigned k = 0; k < SIG_STEPS; k++) {
-			st->sig_hz[i][k] = s->sig_hz[i][k];
-			st->sig_ms[i][k] = s->sig_ms[i][k];
+			st->sig_step[i][k] = settings_sig_pack(s->sig_hz[i][k], s->sig_ms[i][k]);
 		}
 	}
 	st->rs_stored = 1;

@@ -294,7 +294,7 @@ export function validate(m, { bands = null } = {}) {
 	}
 	const recKeys = RECORD_KEYS.filter((row) => g[row.name] != null);
 	for (const row of recKeys) {
-		if (!recordValid(row, g[row.name])) err("general", null, row.name, "sig_range", { hz: 3400, ms: 600 });
+		if (!recordValid(row, g[row.name])) err("general", null, row.name, "sig_range", { hz: 3400, ms: 900 });
 	}
 	// an area of a version the editor doesn't know reads as empty and is never written: a value set here is lost
 	if ((areaKeys.length || recKeys.length) && m.base && decodeArea(m.base.bytes).state === "newer") warn("general", null, (areaKeys[0] || recKeys[0]).name, "settings_area_newer");

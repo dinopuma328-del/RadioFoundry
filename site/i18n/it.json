@@ -1669,7 +1669,7 @@
  "editor.field.sigBegin": "tono di inizio",
  "editor.field.sigEnd": "tono di fine",
  "editor.field.sigIdle": "tono di canale libero",
- "editor.problem.sig_range": "Il campo {field} ha una frequenza sopra {hz} Hz, una durata sopra {ms} ms o non a passi di 10 ms, oppure un'uscita che quell'evento non ha.",
+ "editor.problem.sig_range": "Il campo {field} ha una frequenza sopra {hz} Hz o non a passi di 10 Hz, una durata sopra {ms} ms o non a passi di 10 ms, oppure un'uscita che quell'evento non ha.",
  "editor.general.not_set": "Non impostato",
  "editor.general.on": "Attivo",
  "editor.general.off": "Disattivo",

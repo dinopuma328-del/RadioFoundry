@@ -29,14 +29,20 @@ export const KEYS = [
 ];
 export const KEY = Object.fromEntries(KEYS.map((k) => [k.name, k.key]));
 
-// The record keys the editor knows (3.2): one per signaling tone event (Settings > Signaling tones), 17 bytes each: the
-// outputs for DMR and FM (0 the radio's own sound, 1 off, 2 speaker, 3 on air, 4 both), five frequencies (u16) and five
-// lengths in 10 ms units. In the model a record is {dmr, fm, hz: [5], ms: [5]}, the lengths in ms (0 ends the chain);
+// The record keys the editor knows (3.2): one per signaling tone event (Settings > Signaling tones), 32 bytes each: the
+// outputs for DMR and FM (0 the radio's own sound, 1 off, 2 speaker, 3 on air, 4 both), then ten frequencies (u16) and ten
+// lengths in 10 ms units; the first five of each come first, as the first version's 17 byte record had them, and the
+// other five follow. In the model a record is {dmr, fm, hz: [10], ms: [10]}, the lengths in ms (0 ends the chain);
 // null is an absent key. air: the event has an on-air copy (the end of a reception has none); fmAir: and FM sends it
-export const SIG_STEPS = 5;
+export const SIG_STEPS = 10;
+export const SIG_BASE = 5;	// the steps laid out as the first version's record had them
 export const SIG_HZ_MAX = 3400;
-export const SIG_MS_MAX = 600;	// a step's length: the chain's total is cut to it by the radio
-export const SIG_REC_LEN = 2 + 2 * SIG_STEPS + SIG_STEPS;
+export const SIG_HZ_UNIT = 10;	// frequencies are multiples of this
+export const SIG_MS_MAX = 900;	// a step's length, and the chain's total: the radio cuts it to this
+export const SIG_REC_LEN = 2 + 3 * SIG_STEPS;
+// Byte offsets of step i's frequency and length in a record
+const recHz = (i) => i < SIG_BASE ? 2 + 2 * i : 2 + 3 * SIG_BASE + 2 * (i - SIG_BASE);
+const recMs = (i) => i < SIG_BASE ? 2 + 2 * SIG_BASE + i : 2 + 3 * SIG_BASE + 2 * (SIG_STEPS - SIG_BASE) + (i - SIG_BASE);
 export const RECORD_KEYS = [
 	{ name: "sigBegin", key: 0x0007, type: "record", air: true, fmAir: true },
 	{ name: "sigEnd", key: 0x0008, type: "record", air: true, fmAir: true },
@@ -134,13 +140,13 @@ export function idValue(id) {
 	return Uint8Array.of(id & 0xFF, (id >>> 8) & 0xFF, (id >>> 16) & 0xFF, (id >>> 24) & 0xFF);
 }
 
-// Whether rec is a record row's setting takes: the outputs the event has, a frequency up to 3400 Hz, each length a
-// multiple of 10 ms up to 600
+// Whether rec is a record row's setting takes: the outputs the event has, a frequency up to 3400 Hz in steps of 10, each
+// length a multiple of 10 ms up to 900
 export function recordValid(row, rec) {
 	if (!rec || !Array.isArray(rec.hz) || !Array.isArray(rec.ms) || rec.hz.length !== SIG_STEPS || rec.ms.length !== SIG_STEPS) return false;
 	const out = (v, air) => Number.isInteger(v) && v >= 0 && v <= 4 && (air || (v !== 3 && v !== 4));
 	return out(rec.dmr, row.air) && out(rec.fm, row.fmAir)
-		&& rec.hz.every((x) => Number.isInteger(x) && x >= 0 && x <= SIG_HZ_MAX)
+		&& rec.hz.every((x) => Number.isInteger(x) && x >= 0 && x <= SIG_HZ_MAX && x % SIG_HZ_UNIT === 0)
 		&& rec.ms.every((x) => Number.isInteger(x) && x >= 0 && x <= SIG_MS_MAX && x % 10 === 0);
 }
 
@@ -153,22 +159,22 @@ export function getRecord(entries, row) {
 	b.set(v.subarray(0, SIG_REC_LEN));
 	const rec = { dmr: b[0], fm: b[1], hz: [], ms: [] };
 	for (let i = 0; i < SIG_STEPS; i++) {
-		rec.hz.push(u16(b, 2 + 2 * i));
-		rec.ms.push(b[2 + 2 * SIG_STEPS + i] * 10);
+		rec.hz.push(u16(b, recHz(i)));
+		rec.ms.push(b[recMs(i)] * 10);
 	}
 	return recordValid(row, rec) ? rec : null;
 }
 
-// The value a writer stores for a record: its 17 bytes. A stored value longer than that keeps the bytes after them (4)
+// The value a writer stores for a record: its 32 bytes. A stored value longer than that keeps the bytes after them (4)
 export function recordValue(rec, old = null) {
 	const b = new Uint8Array(Math.max(SIG_REC_LEN, old ? old.length : 0));
 	if (old) b.set(old);
 	b[0] = rec.dmr;
 	b[1] = rec.fm;
 	for (let i = 0; i < SIG_STEPS; i++) {
-		b[2 + 2 * i] = rec.hz[i] & 0xFF;
-		b[3 + 2 * i] = rec.hz[i] >> 8;
-		b[2 + 2 * SIG_STEPS + i] = rec.ms[i] / 10;
+		b[recHz(i)] = rec.hz[i] & 0xFF;
+		b[recHz(i) + 1] = rec.hz[i] >> 8;
+		b[recMs(i)] = rec.ms[i] / 10;
 	}
 	return b;
 }

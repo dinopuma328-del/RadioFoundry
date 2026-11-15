@@ -60,7 +60,7 @@ typedef struct {
 } beep_stats_t;
 
 #define BEEP_SEGS_MAX	6
-#define BEEP_CUSTOM_MAX	5	// steps of a custom pattern (SIG_STEPS)
+#define BEEP_CUSTOM_MAX	10	// steps of a custom pattern (SIG_STEPS)
 
 // audio NULL: beeps are counted as dropped
 void beep_init(const hal_audio_t *audio);

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 The RadioFoundry Authors
 // Signaling tones (docs/spec/radio-features.md 4.3): short tone chains played at the start of a transmission, at
 // its end and when a reception ends, on the speaker, on air, or both, separately for DMR and FM. Up to SIG_STEPS
-// {Hz, ms} steps each, the same shape as the five Frequency / Period rows of a CPS alert tone page.
+// {Hz, ms} steps each, the shape of the Frequency / Period rows of a CPS alert tone page.
 //
 // This file is pure data and a sample generator: no RTOS, no board. The radio core (radio_sm.c) picks what to play
 // and where; beep.c plays the speaker copy; the DMR voice encoder and the FM tone hook carry the on air copy.
@@ -13,8 +13,9 @@
 #include <stdbool.h>
 #include "radio/beep.h"
 
-#define SIG_STEPS	5u
-#define SIG_MAX_MS	600u	// a sequence's total length is cut to this: it holds the transmission or the speaker
+#define SIG_STEPS	10u	// ten: an eight tone ZVEI or a CPS call tone's five and some to spare
+#define SIG_MAX_MS	900u	// a sequence's total length is cut to this: it holds the transmission or the speaker (on air
+				// the call stack's tail hold is three superframes, about 1.08 s)
 
 typedef enum {
 	SIG_EV_BEGIN,		// the transmission starts (talk permit)
@@ -36,6 +37,7 @@ typedef enum {
 // length 0 ends the chain; a chain with no step is the event's standard sound
 #define SIG_MS_UNIT	10u
 #define SIG_HZ_MAX	3400u	// inside the voice band the AMBE encoder carries
+#define SIG_HZ_UNIT	10u	// frequencies are multiples of this (the settings store a step in 16 bits)
 
 // Whether out sounds on the speaker / goes on air. Idle has no air copy (nothing is being sent)
 static inline bool sig_out_local(uint8_t out)
@@ -71,14 +73,18 @@ uint32_t sig_total_ms(const beep_seg_t *s, uint8_t n);
 // The settings area's record of one event (docs/spec/codeplug-settings.md 3): the outputs and the chain, the fields in
 // this order. A record shorter than SIG_REC_LEN reads with the missing fields zero (Default, no step); a longer one
 // (a later version) is read from the front
-#define SIG_REC_LEN	(2u + 2u * SIG_STEPS + SIG_STEPS)
+// The first SIG_REC_BASE steps are laid out as the first version's five (a record written then reads unchanged), the
+// rest follow: hz[SIG_REC_BASE..] and ms10[SIG_REC_BASE..]
+#define SIG_REC_BASE	5u
+#define SIG_REC_LEN	(2u + 3u * SIG_STEPS)
 typedef struct {
 	uint8_t dmr, fm;			// sig_out_t
 	uint16_t hz[SIG_STEPS];
 	uint8_t ms10[SIG_STEPS];		// in SIG_MS_UNIT
 } sig_rec_t;
 // A value as read (len bytes, v holds at most SIG_REC_LEN of them) as the event's record: false when the setting
-// can't take it (an output the event doesn't have, a frequency or a total length over the limits), which reads as an
+// can't take it (an output the event doesn't have, a frequency off the SIG_HZ_UNIT grid or over the limit, a step over
+// the length limit), which reads as an
 // absent key. Nothing is clamped
 bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r);
 void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN]);

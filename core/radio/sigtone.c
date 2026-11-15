@@ -21,6 +21,17 @@ static bool rec_out_ok(uint8_t out, sig_event_t ev)
 	return out == sig_out_clean(out, ev);
 }
 
+// Byte offsets of step i's frequency and length in a record (the first SIG_REC_BASE steps as in the first version)
+static unsigned rec_hz(unsigned i)
+{
+	return i < SIG_REC_BASE ? 2u + 2u * i : 2u + 3u * SIG_REC_BASE + 2u * (i - SIG_REC_BASE);
+}
+
+static unsigned rec_ms(unsigned i)
+{
+	return i < SIG_REC_BASE ? 2u + 2u * SIG_REC_BASE + i : 2u + 3u * SIG_REC_BASE + 2u * (SIG_STEPS - SIG_REC_BASE) + (i - SIG_REC_BASE);
+}
+
 bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r)
 {
 	uint8_t b[SIG_REC_LEN] = { 0 };
@@ -31,9 +42,9 @@ bool sig_rec_decode(const uint8_t *v, int len, sig_event_t ev, sig_rec_t *r)
 	r->dmr = b[0];
 	r->fm = b[1];
 	for (unsigned i = 0; i < SIG_STEPS; i++) {
-		r->hz[i] = (uint16_t)(b[2 + 2 * i] | b[3 + 2 * i] << 8);
-		r->ms10[i] = b[2 + 2 * SIG_STEPS + i];
-		if (r->hz[i] > SIG_HZ_MAX || r->ms10[i] > SIG_MAX_MS / SIG_MS_UNIT) {
+		r->hz[i] = (uint16_t)(b[rec_hz(i)] | b[rec_hz(i) + 1] << 8);
+		r->ms10[i] = b[rec_ms(i)];
+		if (r->hz[i] > SIG_HZ_MAX || r->hz[i] % SIG_HZ_UNIT != 0 || r->ms10[i] > SIG_MAX_MS / SIG_MS_UNIT) {
 			return false;
 		}
 	}
@@ -45,9 +56,9 @@ void sig_rec_encode(const sig_rec_t *r, uint8_t out[SIG_REC_LEN])
 	out[0] = r->dmr;
 	out[1] = r->fm;
 	for (unsigned i = 0; i < SIG_STEPS; i++) {
-		out[2 + 2 * i] = (uint8_t)(r->hz[i] & 0xFFu);
-		out[3 + 2 * i] = (uint8_t)(r->hz[i] >> 8);
-		out[2 + 2 * SIG_STEPS + i] = r->ms10[i];
+		out[rec_hz(i)] = (uint8_t)(r->hz[i] & 0xFFu);
+		out[rec_hz(i) + 1] = (uint8_t)(r->hz[i] >> 8);
+		out[rec_ms(i)] = r->ms10[i];
 	}
 }
 

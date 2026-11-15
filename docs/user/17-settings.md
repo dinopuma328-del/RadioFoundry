@@ -204,7 +204,7 @@ pick where the tone sounds, and you build the tone yourself, step by step.
 
 | Output | The tone sounds |
 |---|---|
-| Default | As before: the talk permit, the call end tone and the FM roger beep, with their own switches in Settings > Sound. The default is not a fifth place: it means "leave this event as it was before this setting existed" |
+| Default | As before: the talk permit and the call end tone, with their switches in Settings > Sound, and the FM roger beep, which has no menu row yet (a developer turns it on over the debug link, and it is off otherwise). The default is not a fifth place: it means "leave this event as it was before this setting existed" |
 | Off | Never, the radio's own tone for that event included |
 | Speaker | On your speaker only |
 | On air | In your transmission, so the other stations hear it. DMR sends it as voice; FM as a tone on the carrier |
@@ -225,7 +225,7 @@ To set a step, press **OK** on it, type the frequency with the keypad (`1 5 7 0`
 **OK**, then do the same for the length and press **OK** again. **Back** leaves the step as it was. A number off the
 steps or out of the range is refused and the message says what fits. A step that was off starts at 40 ms. The whole
 chain is cut at 600 ms; the line above the steps shows the length so far. With no step the event plays its **standard
-sound** (the permit beep at the start, the call end beep at the end and when idle). To copy a CPS call tone of 0, 1570,
+sound** (the permit beep at the start, the call end beep at the end and when idle). The FM end tone is how you get a roger beep from the menu: set it to On air (or Speaker + air); to match the roger beep exactly, set End tone steps to 1200 Hz 100 ms and 900 Hz 100 ms. To copy a CPS call tone of 0, 1570,
 1050, 1570 and 1320 Hz at 40 ms each, set Start tone steps 1 to 5 to those pairs.
 
 - The start tone on air goes in front of your voice, which starts a little later. The end tone on air goes after you

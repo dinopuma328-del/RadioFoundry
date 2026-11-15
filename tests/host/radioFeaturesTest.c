@@ -749,6 +749,79 @@ static void test_beep_sweep(void)
 	CHECK(worst < 1500);	// about 450 at the top of the sweep; a jump misses by up to twice the amplitude
 }
 
+// A pattern handed over as steps (beep_play_custom): plays its length, in order; no tone, no play; a second one while
+// the first plays leaves the first's copy alone and plays in full after it replaces it
+static int crossings_of(const int16_t *p, int n)
+{
+	int c = 0;
+	for (int i = 1; i < n; i++) {
+		c += (p[i - 1] < 0) != (p[i] < 0);
+	}
+	return c;
+}
+
+static void test_beep_custom(void)
+{
+	memset(&aud, 0, sizeof(aud));
+	beep_init(&fake_audio);
+	beep_reset_stats();
+	beep_seg_t a[] = { { 0, 40 }, { 1000, 80 }, { 2000, 80 } };
+	beep_play_custom(a, 3, 100, false);
+	CHECK(beep_busy());
+	a[1].hz = 3000;		// the copy is the beep's: changing the caller's array changes nothing
+	static int16_t out[60 * AUDIO_BLOCK_SAMPLES];
+	int n = 0;
+	int16_t blk[AUDIO_BLOCK_SAMPLES];
+	while (beep_busy() && n + AUDIO_BLOCK_SAMPLES <= (int)(sizeof out / sizeof out[0])) {
+		beep_audio_block(mic, blk, NULL);
+		memcpy(&out[n], blk, sizeof blk);
+		n += AUDIO_BLOCK_SAMPLES;
+	}
+	CHECK(!beep_busy());
+	int first = 0;
+	while (first < n && out[first] == 0) {
+		first++;
+	}
+	// 40 ms of silence after the lead-in, then 1 kHz for 80 ms, then 2 kHz for 80 ms
+	CHECK(first >= 40 * 8 && first < 40 * 8 + 11 * AUDIO_BLOCK_SAMPLES);
+	int c1 = crossings_of(&out[first + 40], 80 * 8 - 120);
+	int c2 = crossings_of(&out[first + 80 * 8 + 40], 80 * 8 - 120);
+	CHECK(c1 >= 2 * 1000 * (80 * 8 - 120) / 8000 - 3 && c1 <= 2 * 1000 * (80 * 8 - 120) / 8000 + 3);
+	CHECK(c2 >= 2 * 2000 * (80 * 8 - 120) / 8000 - 3 && c2 <= 2 * 2000 * (80 * 8 - 120) / 8000 + 3);
+
+	// a list with no tone in it, an empty list and the sweep's marker value play nothing
+	uint32_t played = 0;
+	beep_stats_t st;
+	beep_get_stats(&st);
+	played = st.played;
+	beep_seg_t quiet[] = { { 0, 100 }, { 1000, 0 }, { BEEP_HZ_SWEEP, 100 } };
+	beep_play_custom(quiet, 3, 100, false);
+	beep_play_custom(quiet, 0, 100, false);
+	beep_play_custom(a, 3, 0, false);	// level 0
+	beep_get_stats(&st);
+	CHECK(st.played == played && !beep_busy());
+
+	// a second pattern while the first plays replaces it (as any beep does), and plays in full
+	beep_seg_t b1[] = { { 1000, 100 } };
+	beep_seg_t b2[] = { { 1500, 60 } };
+	beep_play_custom(b1, 1, 100, false);
+	beep_audio_block(mic, blk, NULL);
+	beep_audio_block(mic, blk, NULL);
+	beep_play_custom(b2, 1, 100, false);
+	n = 0;
+	while (beep_busy() && n + AUDIO_BLOCK_SAMPLES <= (int)(sizeof out / sizeof out[0])) {
+		beep_audio_block(mic, blk, NULL);
+		memcpy(&out[n], blk, sizeof blk);
+		n += AUDIO_BLOCK_SAMPLES;
+	}
+	first = 0;
+	while (first < n && out[first] == 0) {
+		first++;
+	}
+	int c = crossings_of(&out[first + 20], 60 * 8 - 60);
+	CHECK(c >= 2 * 1500 * (60 * 8 - 60) / 8000 - 3 && c <= 2 * 1500 * (60 * 8 - 60) / 8000 + 3);
+}
+
 static void test_beep_module(void)
 {
 	memset(&aud, 0, sizeof(aud));
@@ -3750,6 +3823,7 @@ int main(void)
 	test_battery_module();
 	test_beep_module();
 	test_beep_sweep();
+	test_beep_custom();
 	test_vibe_module();
 	test_zone_scan();
 	test_scan_ptt_and_modes();

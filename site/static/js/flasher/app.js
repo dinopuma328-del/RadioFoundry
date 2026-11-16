@@ -145,7 +145,7 @@ const initialState = () => ({
 const S = initialState();
 
 // Custom builds and the flash log
-const API = "https://api.radiofoundry.org/v1/";
+let API = "https://api.radiofoundry.org/v1/";	// a fork's own build API replaces it (site.json build_api, loadData)
 // minimal non-invasive reporting for helping the RadioFoundry project track programming failures; opt out with
 // ?reporting=0
 const FLASH_LOG = new URLSearchParams(location.search).get("reporting") !== "0";
@@ -388,6 +388,7 @@ async function loadData() {
 	// repository texts in the page's language where the catalog overrides them (feature.<SWITCH>.*, variant.<id>.*)
 	const feats = features.features.map((f) => ({ ...f, title: tOr(`feature.${f.name}.title`, f.title), help: tOr(`feature.${f.name}.help`, f.help) }));
 	const vars = variants.variants.map((v) => ({ ...v, title: tOr(`variant.${v.id}.title`, v.title), summary: tOr(`variant.${v.id}.summary`, v.summary) }));
+	if (site.build_api) API = site.build_api;
 	return { radios: radios.radios, features: feats, groups: features.groups, reported: features.reported || [],
 		variants: vars, fb, releases: releases.releases, site };
 }
@@ -1372,6 +1373,19 @@ async function requestBuild(redraw) {
 	redraw();
 	try {
 		const rels = S.data.releases.filter((x) => x.board === S.radio.id);
+		if (S.data.site.own_images && !S.data.site.build_api) {	// a fork with no build service (site/build.py --own-images): its own full image
+			const rel = rels.filter((x) => x.variant === "full").at(-1) || rels.at(-1);
+			if (!rel) throw new Error(t("flash.build.no_image"));
+			const [m, img] = await Promise.all([fetch(`${ROOT}${rel.manifest}`).then((r) => r.json()),
+				fetch(`${ROOT}${rel.image}`).then((r) => r.arrayBuffer()).then((x) => new Uint8Array(x))]);
+			await verify(m, img, fb(), S.board.id);
+			if (!current()) return;
+			S.firmware = { manifest: m, image: img, source: t("flash.build.built", { version: m.version }), origin: "release",
+				variant: rel.variant || "full", selection: key };
+			S.build = null;
+			redraw();
+			return;
+		}
 		if (VERSION_REF && !validRef(VERSION_REF)) throw new Error(t("flash.version.bad", { ref: VERSION_REF }));
 		const id = useId();
 		let b = await api("POST", "builds", { board: S.radio.id, ref: VERSION_REF || (rels.length ? rels[rels.length - 1].version : defaultRef(S.data.site.branch)), features: [...sel.on].sort(),

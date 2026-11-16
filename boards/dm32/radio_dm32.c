@@ -650,6 +650,25 @@ static void tx_tone_side(bool on)
 	hrc_irq_restore(s);
 }
 
+// DMR start tone on the speaker (experimental): the modem's tone generator and its sidetone play the tone in the codec
+// while the voice with the same tone goes on air. In DMR the FM modulator isn't in use, so the generator should not
+// reach the 4FSK; the deviation is the smallest that still starts it, in case it does. Not tried on the radio
+#define DMR_SIDE_DEV	0x10u
+static void dmr_tone_side(uint16_t hz)
+{
+	uint32_t s = hrc_irq_save();
+	if (hz != 0 && mode == RADIO_MODE_DMR) {
+		hrc7000_tx_tone(&modem, hz, DMR_SIDE_DEV);
+		hrc7000_tx_tone_side(&modem, true);
+		amp(AMP_SIDE, true);
+	} else {
+		amp(AMP_SIDE, false);
+		hrc7000_tx_tone_side(&modem, false);
+		hrc7000_tx_tone(&modem, 0, 0);
+	}
+	hrc_irq_restore(s);
+}
+
 static bool tx_tone_key(bool down)
 {
 	if (!transmitting || mode != RADIO_MODE_FM || !modem.tone_on) {
@@ -857,6 +876,7 @@ const hal_radio_t dm32_radio = {
 	.tx_tail = tx_tail,
 	.tx_tone_key = tx_tone_key,
 	.tx_tone_side = tx_tone_side,
+	.dmr_tone_side = dmr_tone_side,
 #if CONFIG_DTMF
 	.tx_dtmf = tx_dtmf,
 #endif

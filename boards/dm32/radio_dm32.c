@@ -654,15 +654,11 @@ static void tx_tone_side(bool on)
 // while the voice with the same tone goes on air. In DMR the FM modulator isn't in use, so the generator should not
 // reach the 4FSK; the deviation is the smallest that still starts it, in case it does. Not tried on the radio
 #define DMR_SIDE_DEV	0x10u
-// In DMR mode the generator's tone came out about 4.4 times too high in the codec (910 Hz heard at 4000 Hz, measured
-// off the speaker with one tone only), so the frequency is divided by that. Measured at a single frequency: the
-// factor is a guess for every other
-#define DMR_SIDE_DIV_X10	44u
 static void dmr_tone_side(uint16_t hz)
 {
 	uint32_t s = hrc_irq_save();
 	if (hz != 0 && mode == RADIO_MODE_DMR) {
-		hrc7000_tx_tone(&modem, (uint16_t)(((uint32_t)hz * 10u + DMR_SIDE_DIV_X10 / 2u) / DMR_SIDE_DIV_X10), DMR_SIDE_DEV);
+		hrc7000_tx_tone(&modem, hz, DMR_SIDE_DEV);
 		hrc7000_tx_tone_side(&modem, true);
 		amp(AMP_SIDE, true);
 	} else {

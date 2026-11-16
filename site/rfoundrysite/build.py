@@ -57,13 +57,11 @@ DOC_ORDER = ("hardware", "install", "codec", "bringup")
 
 
 class Site:
-	def __init__(self, out, repo_url, ref, firmware=None, strict=False, log=print, beta="", i18n_dir=None, own_images=False, build_api=""):
+	def __init__(self, out, repo_url, ref, firmware=None, strict=False, log=print, beta="", i18n_dir=None):
 		self.out = out
 		self.repo_url = repo_url.rstrip("/")
 		self.ref = ref
 		self.firmware = firmware
-		self.build_api = build_api	# a fork's own build API (.github/fork-build), or "" for the project's
-		self.own_images = own_images	# a fork with no build service: the flasher installs the images in firmware/
 		self.beta = beta	# a pre-release newer than the release in firmware (site/cloudflare-build.sh), or ""
 		self.strict = strict
 		self.log = log
@@ -175,7 +173,7 @@ class Site:
 			    for f in self.features]
 		return {
 			"site.json": {"format": "rfoundry-site/1", "git": self.git, "version": self.version, "built": self.built,
-				      "release": self.release, "beta": self.beta, "own_images": self.own_images, "build_api": self.build_api,
+				      "release": self.release, "beta": self.beta,
 				      "branch": self.branch, "repo": self.repo_url, "community": COMMUNITY_URL, "languages": self.i18n.languages, "default_language": self.i18n.default,
 				      "reports": {"sentry_dsn": self.sentry_dsn}, "tool": self.tool},
 			"radios.json": {"radios": radios, "planned": planned},

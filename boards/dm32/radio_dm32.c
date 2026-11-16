@@ -650,6 +650,23 @@ static void tx_tone_side(bool on)
 	hrc_irq_restore(s);
 }
 
+// DMR start tone on the speaker (experimental): the modem's generator and sidetone played a fixed 4 kHz in DMR
+// (measured), so the tone comes from the CPU-fed speaker buffer instead (audio_pcm.c), while the voice with the same
+// tone goes on air. The amplifier takes the codec like the FM sidetone. Not known yet: whether that buffer also
+// reaches the 4FSK, and how it sounds (the speaker PCM buffer was rough on a bench once)
+static void dmr_tone_side(uint16_t hz)
+{
+	uint32_t s = hrc_irq_save();
+	if (hz != 0 && mode == RADIO_MODE_DMR) {
+		hrc_audio_pcm_tone(hz);
+		amp(AMP_SIDE, true);
+	} else {
+		amp(AMP_SIDE, false);
+		hrc_audio_pcm_tone(0);
+	}
+	hrc_irq_restore(s);
+}
+
 static bool tx_tone_key(bool down)
 {
 	if (!transmitting || mode != RADIO_MODE_FM || !modem.tone_on) {
@@ -857,6 +874,7 @@ const hal_radio_t dm32_radio = {
 	.tx_tail = tx_tail,
 	.tx_tone_key = tx_tone_key,
 	.tx_tone_side = tx_tone_side,
+	.dmr_tone_side = dmr_tone_side,
 #if CONFIG_DTMF
 	.tx_dtmf = tx_dtmf,
 #endif

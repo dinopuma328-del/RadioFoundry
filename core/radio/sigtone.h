@@ -16,6 +16,10 @@
 #define SIG_STEPS	10u	// ten: an eight tone ZVEI or a CPS call tone's five and some to spare
 #define SIG_AIR_GUARD_MS 60u	// silence the DMR on air copy carries before a start tone and after an end tone: a link that
 				// drops the first or last frames of a transmission (a hotspot) loses this instead of the tone
+#define SIG_AIR_START_GUARD_MS 200u	// the DMR start tone's own, longer: a receiver beside the radio opens its audio late and
+				// cut the tone at 60 ms (experiment)
+#define SIG_AIR_START_GUARD_MS 100u	// the start tone's own, longer: a receiver beside the radio opens its audio late and cut
+				// the tone at 60 ms
 #define SIG_AIR_STEPS	(SIG_STEPS + 1u)	// a chain and its guard
 #define SIG_MAX_MS	900u	// a sequence's total length is cut to this: it holds the transmission or the speaker (on air
 				// the call stack's tail hold is three superframes, about 1.08 s)

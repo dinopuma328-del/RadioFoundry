@@ -1256,30 +1256,10 @@ static void permit_play(radio_sm_t *sm, uint8_t b)
 	}
 }
 
-// The DMR start tone goes to the speaker with the board's tone generator and sidetone (hal_radio_t.dmr_tone_side), at the
-// moment its voice frames start on air: the start tone is set to speaker + air, and the board has the hook
-static bool dmr_side_on(const radio_sm_t *sm)
-{
-#if CONFIG_SIG_TONES
-	return board.radio->dmr_tone_side != NULL && !sm->host_audio && !sm->view.ch.no_beep &&
-	       sig_local_on(sm, SIG_EV_BEGIN) && sig_out_air(sig_out(sm, SIG_EV_BEGIN), SIG_EV_BEGIN);
-#else
-	(void)sm;
-	return false;
-#endif
-}
-
-#if CONFIG_SIG_TONES
-static void dmr_side_start(radio_sm_t *sm, uint32_t now_ms);
-static void dmr_side_stop(radio_sm_t *sm);
-#endif
-
-// Whether the talk permit sounds before keying on this channel: the board can't play it on air, and it is on. Not when
-// the sidetone plays the start tone with the voice on air instead
+// Whether the talk permit sounds before keying on this channel: the board can't play it on air, and it is on
 static bool permit_before_key(const radio_sm_t *sm)
 {
-	return CONFIG_BEEP && (board.caps & CAP_BEEP_NOT_ON_AIR) != 0 && permit_local(sm) && !sm->view.ch.no_beep &&
-	       !dmr_side_on(sm);
+	return CONFIG_BEEP && (board.caps & CAP_BEEP_NOT_ON_AIR) != 0 && permit_local(sm) && !sm->view.ch.no_beep;
 }
 
 // Digital monitor on now: latched on this channel, or carried by a zone or VFO scan started with it on, so every
@@ -1802,13 +1782,6 @@ static void dmr_publish(radio_sm_t *sm, uint32_t now_ms)
 		d->last_ms = cv->last_heard_ms;
 	}
 	d->underruns = cv->tx_underruns;
-#if CONFIG_SIG_TONES
-	if (d->state == RDMR_TX && sm->dmr_side_pend) {
-		dmr_side_start(sm, now_ms);
-	} else if (d->state != RDMR_TX && d->state != RDMR_TX_ENDING) {
-		dmr_side_stop(sm);
-	}
-#endif
 	changed(sm);
 }
 
@@ -2055,7 +2028,7 @@ static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	// A guard of silence on the outer side: before a start tone (the transmission's first frames), after an end tone
 	// (its last), where a lossy link such as a hotspot has been seen to clip
-	const beep_seg_t guard = { 0, SIG_AIR_GUARD_MS };
+	const beep_seg_t guard = { 0, ev == SIG_EV_END ? SIG_AIR_GUARD_MS : SIG_AIR_START_GUARD_MS };
 	if (ev == SIG_EV_END) {
 		seg[n++] = guard;
 	} else {
@@ -2069,47 +2042,6 @@ static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 	(void)ev;
 #endif
 }
-
-#if CONFIG_SIG_TONES
-// The start tone's sidetone in DMR: the same chain, with the same guard of silence in front, steps as the roger beep's
-// (a step from its own start). It starts with the first voice on air (dmr_publish) and ends with the chain, the over,
-// or the call
-static void dmr_side_stop(radio_sm_t *sm)
-{
-	if (sm->dmr_side_ms != 0) {
-		sm->dmr_side_ms = 0;
-		board.radio->dmr_tone_side(0);
-	}
-}
-
-static void dmr_side_start(radio_sm_t *sm, uint32_t now_ms)
-{
-	sm->dmr_side_pend = false;
-	if (!dmr_side_on(sm)) {
-		return;
-	}
-	beep_seg_t *g = sm->dmr_side_seg;
-	uint8_t n = sig_chain(sm->set.sig_hz[SIG_EV_BEGIN], sm->set.sig_ms[SIG_EV_BEGIN], SIG_EV_BEGIN, g);
-	memmove(&g[1], &g[0], n * sizeof g[0]);
-	g[0].hz = 0;
-	g[0].ms = SIG_AIR_GUARD_MS;
-	sm->dmr_side_n = (uint8_t)(n + 1);
-	sm->dmr_side_i = 0;
-	sm->dmr_side_ms = now_ms != 0 ? now_ms : 1;
-}
-
-static void dmr_side_poll(radio_sm_t *sm, uint32_t now_ms)
-{
-	while (sm->dmr_side_ms != 0 && now_ms - sm->dmr_side_ms >= sm->dmr_side_seg[sm->dmr_side_i].ms) {
-		sm->dmr_side_ms += sm->dmr_side_seg[sm->dmr_side_i].ms;
-		if (++sm->dmr_side_i >= sm->dmr_side_n) {
-			dmr_side_stop(sm);
-			return;
-		}
-		board.radio->dmr_tone_side(sm->dmr_side_seg[sm->dmr_side_i].hz);
-	}
-}
-#endif
 
 static void dmr_ptt_down(radio_sm_t *sm, uint32_t now_ms)
 {
@@ -2146,9 +2078,6 @@ static void dmr_ptt_down(radio_sm_t *sm, uint32_t now_ms)
 	dmr_gps_tx(sm, now_ms);
 #endif
 	sig_air_dmr(sm, SIG_EV_BEGIN);
-#if CONFIG_SIG_TONES
-	sm->dmr_side_pend = dmr_side_on(sm);	// starts with the first voice on air
-#endif
 	dmr_call_ptt(true);
 	dmr_call_poll(now_ms);
 	dmr_follow(sm, now_ms);
@@ -4474,10 +4403,6 @@ static void ptt_release(radio_sm_t *sm, bool roger, uint32_t now_ms)
 	}
 #if CONFIG_DMR
 	if (sm->dmr_running) {
-#if CONFIG_SIG_TONES
-		sm->dmr_side_pend = false;
-		dmr_side_stop(sm);	// let go during the start tone: it ends here
-#endif
 		if (sm->view.dmr.state == RDMR_TX) {
 			sig_air_dmr(sm, SIG_EV_END);	// before the stack hears PTT is up: it holds the over open for it
 		} else {
@@ -6547,11 +6472,6 @@ void radio_sm_poll(radio_sm_t *sm, uint32_t now_ms)
 	}
 	follow_volume(sm);
 	battery_poll(sm, now_ms);
-#if CONFIG_DMR && CONFIG_SIG_TONES
-	if (sm->dmr_side_ms != 0) {
-		dmr_side_poll(sm, now_ms);
-	}
-#endif
 #if CONFIG_BEEP
 	bool shared = false;
 #if CONFIG_DMR

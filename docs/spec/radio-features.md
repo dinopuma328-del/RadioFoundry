@@ -532,13 +532,13 @@ options are put back after it. AMBE is a speech codec: a steady tone passes, a s
 specified here. A start tone is sent with the host's audio (USRP) never, and a start tone longer than the encoder queue
 can hold waits for the call stack, which delays the voice that much. The tone counts in the TX time-out.
 
-The DMR on air copy carries `SIG_AIR_GUARD_MS` (60 ms) of silence on its outer side: before a start tone, after an end tone. A
+The DMR on air copy carries silence on its outer side: `SIG_AIR_START_GUARD_MS` (100 ms) before a start tone (a receiver beside the radio opened its audio late and cut a shorter one), `SIG_AIR_GUARD_MS` (60 ms) after an end tone. A
 link that drops the first or last frames of a transmission (a hotspot, a repeater that opens late) then loses the
 silence and not the tone. The guard counts in the tone's length for the tail hold: 900 ms and its guard are inside the
 three superframes (1080 ms) the over is held for.
 
 On the speaker the start tone follows the board: a board with `CAP_BEEP_NOT_ON_AIR` plays a DMR start tone before keying,
-in the talk permit's hold (`permit_before_key`), and plays the FM start tone on the speaker as it keys (only the DMR engine closes the audio path). In DMR a board with `hal_radio_t.dmr_tone_side` (experimental) plays a start tone set to speaker + air from the modem's tone generator and sidetone, starting with the voice on air and with the same guard of silence the on-air copy carries, instead of the permit hold before keying. A board with `hal_radio_t.tx_tone_side` (the modem's sidetone) hears an FM start tone set to speaker + air from the tone sent on air: the core turns the sidetone on with the tone and off when it ends, and plays no separate beep. The end
+in the talk permit's hold (`permit_before_key`), and plays the FM start tone on the speaker as it keys (only the DMR engine closes the audio path). A board with `hal_radio_t.tx_tone_side` (the modem's sidetone) hears an FM start tone set to speaker + air from the tone sent on air: the core turns the sidetone on with the tone and off when it ends, and plays no separate beep. The end
 tone plays once the transmitter is off, and on a board whose audio path is closed while the DMR engine sends its last burst
 (`hal_audio_t.speaker_blocked`) a little after that: audio queued while the path is closed is dropped when it opens, so the
 core waits for it, at most `DMR_END_WAIT_MS` (400 ms), and then plays it whole.

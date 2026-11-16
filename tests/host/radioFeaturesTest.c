@@ -4057,8 +4057,8 @@ static void test_sig_dmr_air(void)
 	req(RREQ_PTT, 1);
 	run(600);
 	CHECK(sm.view.dmr.state == RDMR_TX && v_enc_tone == 3);
-	// ... after the guard: the 60 ms of silence ahead of it are three frames the encoder took before the tone
-	CHECK(v_enc_last - v_enc_first == 2 && v_enc_first > SIG_AIR_GUARD_MS / 20);
+	// ... after the guard: the 100 ms of silence ahead of it are five frames the encoder took before the tone
+	CHECK(v_enc_last - v_enc_first == 2 && v_enc_first > SIG_AIR_START_GUARD_MS / 20);
 	beep_get_stats(&b1);
 	CHECK(b1.played == b0.played);
 	req(RREQ_PTT, 0);

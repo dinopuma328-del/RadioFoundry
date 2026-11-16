@@ -2055,7 +2055,7 @@ static void sig_air_dmr(radio_sm_t *sm, sig_event_t ev)
 	uint8_t n = sig_chain(sm->set.sig_hz[ev], sm->set.sig_ms[ev], ev, seg);
 	// A guard of silence on the outer side: before a start tone (the transmission's first frames), after an end tone
 	// (its last), where a lossy link such as a hotspot has been seen to clip
-	const beep_seg_t guard = { 0, SIG_AIR_GUARD_MS };
+	const beep_seg_t guard = { 0, ev == SIG_EV_END ? SIG_AIR_GUARD_MS : SIG_AIR_START_GUARD_MS };
 	if (ev == SIG_EV_END) {
 		seg[n++] = guard;
 	} else {
@@ -2092,7 +2092,7 @@ static void dmr_side_start(radio_sm_t *sm, uint32_t now_ms)
 	uint8_t n = sig_chain(sm->set.sig_hz[SIG_EV_BEGIN], sm->set.sig_ms[SIG_EV_BEGIN], SIG_EV_BEGIN, g);
 	memmove(&g[1], &g[0], n * sizeof g[0]);
 	g[0].hz = 0;
-	g[0].ms = SIG_AIR_GUARD_MS;
+	g[0].ms = SIG_AIR_START_GUARD_MS;
 	sm->dmr_side_n = (uint8_t)(n + 1);
 	sm->dmr_side_i = 0;
 	sm->dmr_side_ms = now_ms != 0 ? now_ms : 1;

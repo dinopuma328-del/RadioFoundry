@@ -57,6 +57,11 @@ typedef struct {
 	// The core turns it on with the FM start tone on air, off when that tone ends or the transmission does. A board
 	// without it plays the start tone's speaker copy with the beep engine
 	void (*tx_tone_side)(bool on);
+	// Optional (experimental): the DMR start tone on the speaker while the voice with the same tone goes on air. hz
+	// sounds that tone in the codec from the modem's tone generator, 0 stops it. Called by the core while the call is
+	// transmitting voice. The generator must not reach the DMR modulation. A board without it plays the speaker copy
+	// in the talk permit's hold, before keying
+	void (*dmr_tone_side)(uint16_t hz);
 	// Optional (CONFIG_DTMF): during FM TX, send the DTMF pair of digit ('0'-'9', '*', '#', 'A'-'D'; hal_dtmf.h)
 	// instead of the microphone until called again; 0 = the microphone again. A new digit replaces the one sounding.
 	// False when the board can't (not in FM TX, not a digit). The core never mixes it with tx_tone

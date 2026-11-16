@@ -329,12 +329,6 @@ typedef struct {
 	uint8_t beep_due;		// a beep asked for later (RREQ_BEEP arg2), BEEP_NONE = none
 	uint32_t beep_due_ms;		// when it plays
 #endif
-#if CONFIG_DMR && CONFIG_SIG_TONES
-	uint32_t dmr_side_ms;		// start of the DMR start tone's sidetone step (hal_radio_t.dmr_tone_side), 0 = none
-	uint8_t dmr_side_n, dmr_side_i;	// its steps (the guard first) and the one sounding
-	bool dmr_side_pend;		// armed at PTT: it starts with the first voice on air
-	beep_seg_t dmr_side_seg[SIG_AIR_STEPS];
-#endif
 #if CONFIG_FM_TX_TONES
 	bool burst_timed, burst_held;
 	bool burst_key_owned;		// side-key release owns the burst or its TX denial

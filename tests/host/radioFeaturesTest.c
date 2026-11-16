@@ -54,8 +54,6 @@ static struct {
 	bool led[2];
 	uint16_t tone_hz;	// tx_tone
 	bool side;		// tx_tone_side
-	uint16_t dmr_hz;	// dmr_tone_side: the tone now, and how many tones it was given
-	unsigned dmr_tones;
 	unsigned side_calls;
 	int tone_calls;
 	uint16_t tone_log[16];
@@ -164,7 +162,6 @@ static bool r_tx_dtmf(char digit)
 	return true;
 }
 static void r_tx_tone_side(bool on) { hw.side = on; hw.side_calls++; }
-static void r_dmr_tone_side(uint16_t hz) { hw.dmr_hz = hz; if (hz != 0) { hw.dmr_tones++; } }
 static void r_rx_sleep(bool sleep)
 {
 	hw.asleep = sleep;
@@ -3638,11 +3635,6 @@ static void set_sig_begin_both(radio_settings_t *s)
 	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;
 	sig_chain_put(s, SIG_EV_BEGIN, blip_hz, blip_ms, 1);
 }
-static void set_sig_dmr_begin_both(radio_settings_t *s)
-{
-	s->sig_dmr[SIG_EV_BEGIN] = SIG_OUT_BOTH;
-	sig_chain_put(s, SIG_EV_BEGIN, blip_hz, blip_ms, 1);
-}
 static void set_sig_begin_both_chirp(radio_settings_t *s)
 {
 	s->sig_fm[SIG_EV_BEGIN] = SIG_OUT_BOTH;
@@ -3976,35 +3968,6 @@ static void test_sig_dmr(void)
 	CHECK(sm.view.dmr.state != RDMR_TX_PERMIT && sim.tx_begins == begins + 1);
 	req(RREQ_PTT, 0);
 	run(1000);
-	// With dmr_tone_side the start tone's speaker copy is the board's sidetone, with the voice on air: no hold before
-	// keying, no beep, and the tone starts after the transmission does and is over after its chain
-	hal_radio_t radio_dside = fake_radio;
-	radio_dside.dmr_tone_side = r_dmr_tone_side;
-	board.radio = &radio_dside;
-	settings(set_sig_dmr_begin_both);
-	run(50);
-	hw.dmr_hz = 0;
-	hw.dmr_tones = 0;
-	beep_get_stats(&b0);
-	begins = sim.tx_begins;
-	req(RREQ_PTT, 1);
-	run(10);
-	beep_get_stats(&b1);
-	CHECK(sm.view.dmr.state != RDMR_TX_PERMIT && b1.played == b0.played);
-	run(300);
-	CHECK(sm.view.dmr.state == RDMR_TX && sim.tx_begins == begins + 1 && hw.dmr_tones >= 1);
-	run(700);
-	CHECK(hw.dmr_hz == 0 && hw.dmr_tones == 1);
-	// Let go during the tone: it stops
-	req(RREQ_PTT, 0);
-	run(1000);
-	req(RREQ_PTT, 1);
-	run(150);
-	req(RREQ_PTT, 0);
-	run(10);
-	CHECK(hw.dmr_hz == 0);
-	run(1000);
-	board.radio = &fake_radio;
 	board.caps = caps;
 }
 

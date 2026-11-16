@@ -125,66 +125,6 @@ static void isr_pcm_wr(void)
 
 static void gate_check(void);
 
-// A tone for the speaker alone from the CPU-fed buffer (AUDIO_CONTROL b5, 0x180000A0), experimental: the DMR start tone
-// on the speaker while the voice goes on air. The prompt FIFO can't do that (it rides on the 4FSK). Every 10 ms the
-// modem raises PCM_rd and takes the next 80 samples (8 kHz); a parabola stands in for the sine, which is plenty for a
-// beep. Whether the buffer reaches the modulator too is not known: heard on a second radio first
-#define TONE_AMPL	12000
-#define TONE_BUF_SAMPLES 80
-static volatile uint16_t tone_inc;	// the phase step per sample (65536 = one cycle in 8 kHz); 0 = silent
-static uint16_t tone_phase;
-static bool tone_irq_registered;
-
-static void tone_fill(void)
-{
-	volatile int16_t *spk = (volatile int16_t *)C7_PCM_SPK_ADDR;
-	uint16_t inc = tone_inc;
-	for (uint32_t i = 0; i < TONE_BUF_SAMPLES; i++) {
-		int32_t v = 0;
-		if (inc != 0) {
-			uint32_t q = tone_phase & 0x7FFFu;
-			int32_t y = (int32_t)((q * (0x8000u - q)) >> 13);	// 0..32768, the half cycle's arch
-			v = (y * TONE_AMPL) >> 15;	// 32768 * 12000 fits 32 bits
-			if ((tone_phase & 0x8000u) != 0) {
-				v = -v;
-			}
-			tone_phase = (uint16_t)(tone_phase + inc);
-		}
-		spk[i] = (int16_t)v;
-	}
-}
-
-static void isr_pcm_rd(void)
-{
-	hrc7000_wr(modem, C7_INTERP_CLEAR, C7_INT_PCM_RD);
-	tone_fill();
-}
-
-void hrc_audio_pcm_tone(uint16_t hz)
-{
-	if (modem == NULL) {
-		return;
-	}
-	uint32_t s = hrc_irq_save();
-	if (hz != 0) {
-		if (!tone_irq_registered) {
-			hrc_irq_register(IRQ_PCM_RD, isr_pcm_rd);
-			tone_irq_registered = true;
-		}
-		tone_inc = (uint16_t)(((uint32_t)hz * 65536u + 4000u) / 8000u);
-		tone_fill();	// the buffer is not empty when the modem first reads it
-		hrc7000_wr(modem, C7_INTERP_CLEAR, C7_INT_PCM_RD);
-		hrc_irq_enable(IRQ_PCM_RD, true);
-		hrc7000_audio_bits(modem, C7_AUDIO_PCM_SPK, 0);
-	} else if (tone_irq_registered && tone_inc != 0) {
-		hrc7000_audio_bits(modem, 0, C7_AUDIO_PCM_SPK);
-		hrc_irq_enable(IRQ_PCM_RD, false);
-		tone_inc = 0;
-		tone_fill();	// leaves the buffer silent
-	}
-	hrc_irq_restore(s);
-}
-
 // Push 32-sample chunks while the FIFO has room (AUDIO_CONTROL b31 clear). Task context: the task tops it up every
 // 2 ms while the speaker is routed, faster than a chunk (4 ms) plays
 static void fifo_feed(void)

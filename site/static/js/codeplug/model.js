@@ -16,7 +16,8 @@ import {
 } from "./records.js";
 import { parseTone } from "./fields.js";
 import { readHeader } from "./iddb.js";
-import { decodeArea, keyValid, recordValid, KEYS, RECORD_KEYS } from "./kv.js";
+import { decodeArea, keyValid, recordValid, KEYS, RECORD_KEYS, ID_MAX } from "./kv.js";
+import { slotValid, SPEED_NAME_LEN } from "./speeddial.js";
 import { decodeModes, encodeModes, syncModes, removeModes, validateModes, MODE_LIMITS } from "./channelmodes.js";
 
 const REFS = ["contact", "rxList", "aprs"];
@@ -316,6 +317,14 @@ export function validate(m, { bands = null, features = null } = {}) {
 	}
 	// an area of a version the editor doesn't know reads as empty and is never written: a value set here is lost
 	if ((areaKeys.length || recKeys.length) && m.base && decodeArea(m.base.bytes).state === "newer") warn("general", null, (areaKeys[0] || recKeys[0]).name, "settings_area_newer");
+	// speed dial slots (speeddial.js): one the radio would read as empty is never written
+	(g.speedDial || []).forEach((s, n) => {
+		if (slotValid(s)) return;
+		if (s.name?.length > SPEED_NAME_LEN) err("general", null, "speedDial", "speed_dial_name", { n, max: SPEED_NAME_LEN });
+		else err("general", null, "speedDial", "speed_dial_id", { n, max: ID_MAX });
+	});
+	if ((g.speedDial || []).some((s) => s) && !areaKeys.length && !recKeys.length && m.base && decodeArea(m.base.bytes).state === "newer")
+		warn("general", null, "speedDial", "speed_dial_area_newer");
 
 	const counts = [["channels", LIMITS.channels], ["contacts", LIMITS.contacts], ["rxLists", LIMITS.rxLists],
 		["zones", LIMITS.zones], ["dtmfContacts", LIMITS.dtmfContacts], ["aprs", LIMITS.aprs]];

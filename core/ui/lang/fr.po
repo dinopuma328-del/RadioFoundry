@@ -358,14 +358,19 @@ msgid "Default: "
 msgstr "Par défaut : "
 
 #: core/ui/ui_app.c
+msgctxt "DIAL_TOAST_DMR_ONLY"
+msgid "Speed dial: on DMR channels"
+msgstr "Appel abrégé : canaux DMR seuls"
+
+#: core/ui/ui_app.c
 msgctxt "DIAL_TOAST_SPEED_DIAL"
 msgid "Speed dial "
 msgstr "Appel abrégé "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_IS_EMPTY"
-msgid " is empty: set it in qdmr"
-msgstr " vide: régler qdmr"
+msgctxt "DIAL_TOAST_IS_EMPTY_EDITOR"
+msgid " is empty: set it in the Codeplug Editor"
+msgstr " est vide : à régler dans le Codeplug Editor"
 
 #: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"

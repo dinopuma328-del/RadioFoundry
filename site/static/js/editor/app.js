@@ -12,7 +12,8 @@ import { decode, encode, empty, remove, validate, newChannel, newContact, number
 import { LIMITS, decodeGeneral } from "../codeplug/records.js";
 import { CpsSerial, TransportError, estimate, keepIdentity, IDENTITY, iddbRanges } from "../codeplug/transport.js";
 import { FastError } from "../codeplug/fastlink.js";
-import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_HZ_UNIT, SIG_MS_MAX, SIG_STEPS } from "../codeplug/kv.js";
+import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_HZ_UNIT, SIG_MS_MAX, SIG_STEPS, ID_MAX } from "../codeplug/kv.js";
+import { SPEED_SLOTS, SPEED_TYPES, SPEED_NAME_LEN } from "../codeplug/speeddial.js";
 import { toSerial, CLICK_WAIT_MS } from "../flasher/netmode.js";
 import { convert as convertDb, readHeader as dbHeader } from "../codeplug/iddb.js";
 import { convertIddb, iddbEnd } from "../codeplug/sources/output.js";
@@ -487,6 +488,7 @@ function radioTab() {
 		h("h3", {}, t("editor.sig.title")),
 		h("p", { class: "small muted" }, t("editor.sig.help")),
 		h("div", { class: "sig-grid" }, ...RECORD_KEYS.map(sigBlock)),
+		speedDialPart(),
 	];
 	if (S.conn) {
 		const p = S.conn.probe;
@@ -548,6 +550,61 @@ function sigPlay(rec, btn, t) {
 	} catch {
 		btn.textContent = t("editor.sig.no_audio");
 	}
+}
+
+// The speed dial slots (codeplug-settings.md, "Speed dial slots"): a row per digit held on Home, its call type, ID and
+// name, or a contact copied into them. A slot holds the target itself, so editing the contacts never changes it
+function speedDialPart() {
+	const slots = S.model.general.speedDial || Array(SPEED_SLOTS).fill(null);
+	const set = (n, s) => change(t("editor.undo.edit"), () => {
+		const next = [...(S.model.general.speedDial || Array(SPEED_SLOTS).fill(null))];
+		next[n] = s;
+		S.model.general = { ...S.model.general, speedDial: next };
+	});
+	const row = (n) => {
+		const s = slots[n];
+		const err = h("span", { class: "small ed-err" });
+		const type = h("select", { "aria-label": t("editor.speed.type_n", { n }) },
+			h("option", { value: "" }, t("editor.speed.empty")),
+			...SPEED_TYPES.map((x) => h("option", { value: x }, t(`editor.speed.type.${x}`))));
+		type.value = s ? s.type : "";
+		const id = h("input", { type: "text", inputmode: "numeric", size: 9, maxlength: 8, value: s && s.type !== "all" && s.id ? String(s.id) : "",
+			disabled: !s || s.type === "all", "aria-label": t("editor.speed.id_n", { n }), spellcheck: "false" });
+		const name = h("input", { type: "text", size: 16, maxlength: SPEED_NAME_LEN, value: s ? s.name : "", disabled: !s,
+			"aria-label": t("editor.speed.name_n", { n }), spellcheck: "false" });
+		type.addEventListener("change", () => {
+			if (!type.value) return set(n, null);
+			// a new slot starts with no ID: the field asks for one (validate() reports it until then)
+			set(n, { type: type.value, id: type.value === "all" ? 0xFFFFFF : (s && s.type !== "all" ? s.id : 0), name: s ? s.name : "" });
+		});
+		id.addEventListener("change", () => {
+			const v = Number(id.value.trim());
+			if (!Number.isInteger(v) || v < 1 || v > ID_MAX) {
+				err.textContent = t("editor.err.range", { min: 1, max: ID_MAX });
+				return;
+			}
+			err.textContent = "";
+			set(n, { ...s, id: v });
+		});
+		name.addEventListener("change", () => set(n, { ...s, name: name.value.slice(0, SPEED_NAME_LEN) }));
+		// a contact fills the three fields; the slot keeps a copy, not a link
+		const pick = h("select", { "aria-label": t("editor.speed.contact_n", { n }), disabled: !S.model.contacts.length },
+			h("option", { value: "" }, t("editor.speed.pick_contact")),
+			...S.model.contacts.map((c, i) => h("option", { value: String(i) }, c.type === "all" ? c.name : `${c.name} · ${c.id}`)));
+		pick.addEventListener("change", () => {
+			const c = S.model.contacts[Number(pick.value)];
+			if (c) set(n, { type: c.type, id: c.id, name: c.name.slice(0, SPEED_NAME_LEN) });
+		});
+		const clear = button(t("editor.speed.clear"), () => set(n, null), { quiet: true, disabled: !s });
+		return h("tr", {}, h("th", { scope: "row" }, String(n)), h("td", {}, type), h("td", {}, id), h("td", {}, name),
+			h("td", {}, pick), h("td", {}, h("span", { class: "ed-actions" }, clear), err));
+	};
+	return h("div", { class: "form-table ed-speed-dial" },
+		h("h3", {}, t("editor.speed.title")),
+		h("p", { class: "small muted" }, t("editor.speed.help")),
+		h("div", { class: "table-wrap" }, h("table", { class: "data" },
+			h("thead", {}, h("tr", {}, ...["digit", "type", "id", "name", "contact", "actions"].map((k) => h("th", { scope: "col" }, t(`editor.speed.col.${k}`))))),
+			h("tbody", {}, ...Array.from({ length: SPEED_SLOTS }, (_, n) => row(n))))));
 }
 
 // --- Problems tab ---

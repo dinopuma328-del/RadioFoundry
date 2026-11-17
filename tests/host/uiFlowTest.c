@@ -909,6 +909,14 @@ static const flow_t flows[] = {
 	{ "T FM transmitting: a digit does nothing (#37)", "down pttdown", "5", "screen=home toast=none", 1, false },
 	{ "T FM transmitting: a held digit does nothing (#37)", "down pttdown", "long:5", "screen=home toast=none", 1, false },
 	{ "T DMR transmitting: a digit does nothing (#37)", "pttdown", "5", "screen=home toast=none", 1, false },
+	// Speed dial (#513): a held digit on Home talks to the slot's target; PTT then calls it
+	{ "D speed dial: a talkgroup", "", "long:4", "screen=home talk=4000 toast=Talking_to_TG_4000_Unlink", 1, false },
+	{ "D speed dial: PTT calls it", "long:4", "ptt", "txid=4000 txpriv=0", 1, false },
+	{ "D speed dial: a person", "", "long:7 ptt", "txid=9997777 txpriv=1", 2, false },
+	{ "D speed dial: all call", "", "long:9", "toast=Talking_to_All_call", 1, false },
+	{ "D speed dial: an empty slot", "", "long:2", "screen=home toast=Speed_dial_2_is_empty:_set_it_in_the_Codeplug_Editor", 1,
+	  false },
+	{ "D speed dial: not on FM", "down", "long:4", "screen=home toast=Speed_dial:_on_DMR_channels", 1, false },
 	// DMR data without PTT (#148): Home stays, the activity line says SENDING, a call's screen is for voice
 	{ "T DMR data on the air: Home says SENDING", "", "datatx", "screen=home shows=SENDING hides=TALKING", 0, false },
 	{ "T DMR data done: Home goes back", "datatx", "dataend", "screen=home hides=SENDING", 0, false },

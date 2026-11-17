@@ -674,6 +674,9 @@ dialog.editor-dialog { max-width: 52rem; max-height: calc(100vh - 4rem); overflo
 .sig-r-pause { fill: var(--muted); opacity: 0.6; }
 .sig-steps tbody tr:last-child th, .sig-steps tbody tr:last-child td { border-bottom: 0; }
 
+.ed-speed-dial { max-width: 60rem; margin-top: var(--space-5); }
+.ed-speed-dial select, .ed-speed-dial input[type="text"] { font: inherit; padding: 2px var(--space-1); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }
+.ed-speed-dial input:disabled, .ed-speed-dial select:disabled { opacity: 0.5; }
 .members { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-3); align-items: start; }
 .members h3 { font-size: var(--text-sm); margin-bottom: var(--space-1); }
 .members input[type="search"] { width: 100%; margin-bottom: var(--space-1); }

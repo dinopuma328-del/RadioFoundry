@@ -71,6 +71,7 @@ is `tools/bringup.py list --radio <id>`.
 | `channel_edit` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | pass, needs re-run | ✕ |
 | `zone_edit` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | pass, needs re-run | ✕ |
 | `contact_edit` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | ✕ |
+| `speed_dial` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |
 | `volume_bar` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |
 | `volume_lock` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |
 | `key_assign` | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |
@@ -284,6 +285,7 @@ clock`; ? = not known yet). No driver reads the clock yet ([radio-features.md](s
 | `CHANNEL_EDIT` | ● | ● | ● | ● | ● | ● | ● | ✕ |
 | `ZONE_EDIT` | ● | ● | ● | ● | ● | ● | ● | ✕ |
 | `CONTACT_EDIT` | ● | ● | ● | ● | ● | ● | ● | ✕ |
+| `SPEED_DIAL` | ● | ● | ● | ● | ● | ● | ● | ● |
 | `VOLUME_BAR` | ● | ● | ● | ● | ● | ● | ● | ● |
 | `P25` | ● | ● | ● | ● | … | ● | ● | ● |
 | `P25_TRUNK` | ● | ● | ● | ● | … | ● | ● | ● |
@@ -329,6 +331,7 @@ clock`; ? = not known yet). No driver reads the clock yet ([radio-features.md](s
 | Channel editor: edit a channel, New channel from current settings, text entry | `CHANNEL_EDIT` | 4,656 | 4,252 | Needs `CHANNEL_LIST`. Without it a channel's settings are read only. Measured 2026-10-17 |
 | Zone editor: move, add, copy and remove channels in a zone; rename, copy and delete a zone | `ZONE_EDIT` | 6,580 | 6,928 | Needs `CHANNEL_EDIT`. Measured 2026-10-24 on the default builds, LTO as each has it; also about 1.3 KB of RAM |
 | Contact editor: a new contact from Find or a call's actions (name, ID, type, timeslot) | `CONTACT_EDIT` | 1,580 | 1,580 | Needs `CHANNEL_EDIT` and `DMR`. Measured 2026-10-30 on the default builds |
+| Speed dial: a digit held on Home talks to its slot's talkgroup or person, slots set in the Codeplug Editor (#513) | `SPEED_DIAL` | 432 | 244 | Needs `DMR`. Measured 2026-11-17 on the default builds, LTO as each has it; also 88 B of RAM on the DM-1701 |
 | Volume bar when a knob the MCU reads turns (#354) | `VOLUME_BAR` | 496 | 428 | Measured 2026-11-08 on the default builds; shows only on a radio with such a knob. Off, the volume screen keeps the segment drawing it now shares (about 90 bytes) |
 | Key assignment (Settings > Keys, codeplug) | `KEY_ASSIGN` | 2,120 | 2,188 | Up to 9 keys. Measured 2026-10-24 |
 | Scan, band scan, dual watch, nuisance delete | `SCAN` | 2,576 | 3,032 |  |

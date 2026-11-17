@@ -375,6 +375,11 @@ msgid " is empty: set it in the Codeplug Editor"
 msgstr " 为空：请在 Codeplug Editor 中设置"
 
 #: core/ui/ui_app.c
+msgctxt "WHY_SPEED_DIAL_NOT_IN_BUILD"
+msgid "Speed dial: not in this build"
+msgstr "缩位拨号：本版本无"
+
+#: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"
 msgid "Reply ended"
 msgstr "回复已结束"

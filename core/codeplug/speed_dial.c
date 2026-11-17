@@ -6,7 +6,7 @@
 #include "codeplug/speed_dial.h"
 #include "codeplug/codeplug_kv.h"
 
-#if CONFIG_DMR
+#if CONFIG_SPEED_DIAL
 
 bool speed_dial_decode(const uint8_t *v, int n, speed_dial_t *out)
 {

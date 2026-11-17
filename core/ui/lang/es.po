@@ -373,6 +373,11 @@ msgid " is empty: set it in the Codeplug Editor"
 msgstr " está vacío: configúralo en el Codeplug Editor"
 
 #: core/ui/ui_app.c
+msgctxt "WHY_SPEED_DIAL_NOT_IN_BUILD"
+msgid "Speed dial: not in this build"
+msgstr "Marcado rápido: no disponible"
+
+#: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"
 msgid "Reply ended"
 msgstr "Fin de respuesta"

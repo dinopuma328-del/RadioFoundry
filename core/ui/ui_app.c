@@ -1113,10 +1113,10 @@ static bool talk_step(int dir)
 // picker; nothing is sent until PTT (codeplug-settings.md, "Speed dial slots")
 static void speed_dial(int d)
 {
+#if CONFIG_SPEED_DIAL
 	static char msg[80];	// the empty slot's line is longer than a talk toast's
 	sbuf_t b;
 	sb_init(&b, msg, sizeof msg);
-#if CONFIG_DMR
 	speed_dial_t s;
 	if (view->ch.mode != RADIO_MODE_DMR) {
 		ui_toast(TR(DIAL_TOAST_DMR_ONLY, "Speed dial: on DMR channels"));
@@ -1131,11 +1131,14 @@ static void speed_dial(int d)
 		ui_talk(&t, false);
 		return;
 	}
-#endif
 	sb_str(&b, TR(DIAL_TOAST_SPEED_DIAL, "Speed dial "));
 	sb_u32(&b, (uint32_t)d, 1);
 	sb_str(&b, TR(DIAL_TOAST_IS_EMPTY_EDITOR, " is empty: set it in the Codeplug Editor"));
 	ui_toast(msg);
+#else
+	(void)d;
+	ui_toast(TR(WHY_SPEED_DIAL_NOT_IN_BUILD, "Speed dial: not in this build"));
+#endif
 }
 
 bool ui_home_key(const input_event_t *ev)

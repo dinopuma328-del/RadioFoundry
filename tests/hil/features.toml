@@ -174,6 +174,10 @@ spec = "docs/spec/ui.md"
 switch = "CONTACT_EDIT"
 spec = "docs/spec/ui.md"
 
+[feature.speed_dial]
+switch = "SPEED_DIAL"
+spec = "docs/spec/codeplug-settings.md"
+
 [feature.volume_bar]
 switch = "VOLUME_BAR"
 spec = "docs/spec/radio-features.md"

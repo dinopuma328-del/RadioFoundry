@@ -25,6 +25,7 @@
 #include "radio/tones.h"
 #include "config.h"
 #include "codeplug/codeplug_modes.h"	// CODEPLUG_KIND_NONE
+#include "codeplug/speed_dial.h"
 #if CONFIG_HOTSPOT || (CONFIG_USB_NETWORK && CONFIG_HOSTLINK)
 #include "hostlink/hostlink.h"
 #endif
@@ -1108,6 +1109,35 @@ static bool talk_step(int dir)
 }
 #endif
 
+// A digit held on Home: the slot's target becomes the temporary talk target, as one picked from the talk target
+// picker; nothing is sent until PTT (codeplug-settings.md, "Speed dial slots")
+static void speed_dial(int d)
+{
+	static char msg[80];	// the empty slot's line is longer than a talk toast's
+	sbuf_t b;
+	sb_init(&b, msg, sizeof msg);
+#if CONFIG_DMR
+	speed_dial_t s;
+	if (view->ch.mode != RADIO_MODE_DMR) {
+		ui_toast(TR(DIAL_TOAST_DMR_ONLY, "Speed dial: on DMR channels"));
+		return;
+	}
+	if (speed_dial_get((uint8_t)d, &s)) {
+		ui_target_t t;
+		memset(&t, 0, sizeof t);
+		t.id = s.id;
+		t.group = s.type != SPEED_DIAL_INDIVIDUAL;
+		strcpy(t.name, s.name);
+		ui_talk(&t, false);
+		return;
+	}
+#endif
+	sb_str(&b, TR(DIAL_TOAST_SPEED_DIAL, "Speed dial "));
+	sb_u32(&b, (uint32_t)d, 1);
+	sb_str(&b, TR(DIAL_TOAST_IS_EMPTY_EDITOR, " is empty: set it in the Codeplug Editor"));
+	ui_toast(msg);
+}
+
 bool ui_home_key(const input_event_t *ev)
 {
 #if CONFIG_DUAL_WATCH
@@ -1139,13 +1169,7 @@ bool ui_home_key(const input_event_t *ev)
 		return true;
 	}
 	if (d >= 0 && ev->gesture == GESTURE_LONG && !view->vfo) {
-		static char msg[48];
-		sbuf_t b;
-		sb_init(&b, msg, sizeof msg);
-		sb_str(&b, TR(DIAL_TOAST_SPEED_DIAL, "Speed dial "));
-		sb_u32(&b, (uint32_t)d, 1);
-		sb_str(&b, TR(DIAL_TOAST_IS_EMPTY, " is empty: set it in qdmr"));
-		ui_toast(msg);
+		speed_dial(d);
 		return true;
 	}
 	if (d >= 0 && (press || ev->gesture == GESTURE_LONG)) {

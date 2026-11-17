@@ -10,6 +10,7 @@
 #include <string.h>
 #include "codeplug/codeplug.h"
 #include "codeplug/codeplug_kv.h"
+#include "codeplug/speed_dial.h"
 #include "storage/storage.h"
 #include "sim/sim_flash.h"
 
@@ -586,6 +587,60 @@ static void test_power_cut(void)
 	CHECK(o > 0 && nw > 0);
 }
 
+// Speed dial slots (spec, "Speed dial slots"): the record read from the front; a value a slot can't take reads as an
+// empty slot
+static void speed_rec(uint8_t *r, uint8_t flags, uint32_t id, const char *name)
+{
+	memset(r, 0xFF, SPEED_DIAL_REC_LEN);
+	r[0] = flags;
+	r[1] = (uint8_t)id;
+	r[2] = (uint8_t)(id >> 8);
+	r[3] = (uint8_t)(id >> 16);
+	memcpy(&r[4], name, strlen(name));
+}
+
+static void test_speed_dial(void)
+{
+	uint8_t r[SPEED_DIAL_REC_LEN + 4];
+	speed_dial_t s;
+	fresh();
+	CHECK(!speed_dial_get(4, &s));		// a blank area: every slot empty
+	speed_rec(r, SPEED_DIAL_GROUP, 4000, "Unlink");
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_SPEED_DIAL + 4, r, SPEED_DIAL_REC_LEN));
+	CHECK(speed_dial_get(4, &s) && s.type == SPEED_DIAL_GROUP && s.id == 4000 && strcmp(s.name, "Unlink") == 0);
+	CHECK(!speed_dial_get(3, &s) && !speed_dial_get(5, &s));
+	CHECK(!speed_dial_get(SPEED_DIAL_SLOTS, &s));	// past the digits
+	// a 16-character name has no terminator; a NUL-padded one ends at the NUL
+	speed_rec(r, SPEED_DIAL_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP");
+	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.type == SPEED_DIAL_INDIVIDUAL && s.id == 9991234 &&
+	      strcmp(s.name, "ABCDEFGHIJKLMNOP") == 0);
+	speed_rec(r, SPEED_DIAL_GROUP, 91, "");
+	memset(&r[4], 0, CODEPLUG_NAME_LEN);
+	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.name[0] == '\0');
+	// all call: the ID stored doesn't matter
+	speed_rec(r, SPEED_DIAL_ALL, 0, "");
+	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.type == SPEED_DIAL_ALL && s.id == 0xFFFFFFu);
+	// reserved flag bits and a longer (later) record: read from the front
+	speed_rec(r, 0xFC | SPEED_DIAL_GROUP, 3100, "USA");
+	r[SPEED_DIAL_REC_LEN] = 0x55;
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_SPEED_DIAL + 0, r, SPEED_DIAL_REC_LEN + 4));
+	CHECK(speed_dial_get(0, &s) && s.type == SPEED_DIAL_GROUP && s.id == 3100 && strcmp(s.name, "USA") == 0);
+	// absent for the reader: too short, call type 3, ID 0, an ID past CODEPLUG_DMR_ID_MAX
+	speed_rec(r, SPEED_DIAL_GROUP, 91, "");
+	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN - 1, &s));
+	CHECK(!speed_dial_decode(r, -1, &s));
+	speed_rec(r, 3, 91, "");
+	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
+	speed_rec(r, SPEED_DIAL_INDIVIDUAL, 0, "");
+	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
+	speed_rec(r, SPEED_DIAL_GROUP, CODEPLUG_DMR_ID_MAX + 1u, "");
+	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
+	speed_rec(r, SPEED_DIAL_GROUP, CODEPLUG_DMR_ID_MAX, "");
+	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.id == CODEPLUG_DMR_ID_MAX);
+	// a slot removed is empty again
+	CHECK(codeplug_kv_remove(CODEPLUG_KEY_SPEED_DIAL + 4) && !speed_dial_get(4, &s));
+}
+
 int main(void)
 {
 	test_blank();
@@ -603,6 +658,7 @@ int main(void)
 	test_head();
 	test_serial_commit();
 	test_power_cut();
+	test_speed_dial();
 	sim_flash_free();
 	if (failures) {
 		printf("codeplugKvTest: %d failure(s)\n", failures);

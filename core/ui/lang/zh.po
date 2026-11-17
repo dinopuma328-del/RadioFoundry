@@ -360,14 +360,19 @@ msgid "Default: "
 msgstr "默认： "
 
 #: core/ui/ui_app.c
+msgctxt "DIAL_TOAST_DMR_ONLY"
+msgid "Speed dial: on DMR channels"
+msgstr "缩位拨号：仅限 DMR 信道"
+
+#: core/ui/ui_app.c
 msgctxt "DIAL_TOAST_SPEED_DIAL"
 msgid "Speed dial "
 msgstr "缩位拨号 "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_IS_EMPTY"
-msgid " is empty: set it in qdmr"
-msgstr " 为空：请在 qdmr 设置"
+msgctxt "DIAL_TOAST_IS_EMPTY_EDITOR"
+msgid " is empty: set it in the Codeplug Editor"
+msgstr " 为空：请在 Codeplug Editor 中设置"
 
 #: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"

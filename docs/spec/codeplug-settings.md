@@ -111,6 +111,7 @@ continuation keeps the reserved bytes and the header length as it found them.
 | 0x1800 | Target lists | record list | 0x1800-0x18FF: receive lists of targets ([channel-modes.md](channel-modes.md) 5.3) | none | a kind that uses them built |
 | 0x1900 | Traffic keys | record list | 0x1900-0x1CFF: keys that encrypt traffic, each a system's ([channel-modes.md](channel-modes.md) 5.4) | none | a type that uses them built |
 | 0x1D00 | Zone tags | record list | 0x1D00-0x1DFF: reserved for per-zone mode records ([channel-modes.md](channel-modes.md) 5.6) | none | none yet |
+| 0x1E00 | Speed dial | record list | 0x1E00-0x1EFF: the target of a digit held on Home, slot n at 0x1E00 + n (3.3); slots 0-9 are read | none | DMR in the build (`CONFIG_DMR`) |
 
 **Radio's own copy** is the setting's field in the settings store ([settings-store.md](settings-store.md) 3). Every
 scalar key has one (3.2).
@@ -175,6 +176,27 @@ A list that belongs to a radio's controls is a family too: the keypad buttons, o
 button's action. Ranges are assigned in blocks of 256 from 0x0100 up (0x0100-0x01FF the first), so a family can grow
 to its block and no further without a new row. A list that may outgrow a block is split into two families by the
 change that needs it, never by moving the first.
+
+### 3.3 Speed dial slots
+
+A digit held on Home (0-9) is a slot: key 0x1E00 + digit. Its record names a DMR call target, which becomes the
+temporary talk target, as one picked in the talk target picker ([ui.md](ui.md) 3). Nothing is sent until PTT.
+The rest of the family's block is free for more slots. 20 bytes, little endian:
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | Flags: bits 0-1 call type (0 individual, 1 group, 2 all call), as a target's ([channel-modes.md](channel-modes.md) 5.2); bits 2-7 reserved, written 0, ignored by a reader |
+| 1 | 3 | DMR ID, u24. Ignored for all call (0xFFFFFF on the air) |
+| 4 | 16 | Name, as a channel record's (0xFF or NUL padded); empty for none |
+
+- A slot is empty when its key is absent, or when the record is absent for the reader: shorter than 20 bytes, call
+  type 3, or an individual or group ID of 0 or above 16776415 (`CODEPLUG_DMR_ID_MAX`). Nothing is clamped (3.1).
+- A longer record (a later version's) is read from the front.
+- The slot holds the target itself, not a contact number: it works for a talkgroup that is not in the contacts, and
+  editing the contacts can't point it at another one.
+- The radio only reads the slots (`speed_dial_get`, `core/codeplug/speed_dial.c`). The Codeplug Editor writes them.
+  A family has no copy in the settings store (3.2): with another firmware's codeplug every slot is empty.
+- On a channel that isn't DMR, or in the VFO, a held digit doesn't use the slots ([ui.md](ui.md) 3).
 
 ## 4. Rules for readers and writers
 
@@ -305,6 +327,10 @@ rule. Their `verify` leaves the area out by the same rule, so a kept area isn't 
 The editor's keys are one table, `KEYS` in `kv.js`: the model's field, the key, the type, the bytes it stores and
 the range. Decoding, encoding and validation follow the row. The Radio tab shows each key as a field. A field left
 empty is an absent key. Typing a value writes the key; for an ID, 0 turns the setting off.
+
+The speed dial slots (3.3) are a table on the Radio tab (`speeddial.js`): a row per digit, its call type, ID and
+name, or a contact copied into them. An edit writes only the slots that read differently, each record from the front;
+a slot the radio would read as empty is a Problems error and isn't written.
 
 The editor reads and writes the sector with the other EEPROM regions and keeps entries it doesn't know. On a write
 to a radio it sends (`areaForWrite`):

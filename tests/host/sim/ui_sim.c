@@ -79,6 +79,7 @@
 #include "stubentry/stub_entry.h"
 #include "ui/ui_svc_aprs.h"
 #include "codeplug/codeplug_tag.h"
+#include "codeplug/speed_dial.h"
 #if CONFIG_P25
 #include "p25/p25_codeplug.h"
 #include "radio/radio_p25.h"
@@ -1039,6 +1040,27 @@ bool ui_svc_write_contact(uint16_t index, const contact_t *c)
 	return true;
 }
 #endif
+
+// Speed dial (core/codeplug/speed_dial.c reads the settings area; tested in codeplugKvTest): slot 4 a talkgroup that
+// is not in the contacts, slot 7 a person, slot 9 all call; the rest empty
+bool speed_dial_get(uint8_t n, speed_dial_t *out)
+{
+	memset(out, 0, sizeof *out);
+	if (n == 4) {
+		out->type = SPEED_DIAL_GROUP;
+		out->id = 4000;
+		strcpy(out->name, "Unlink");
+	} else if (n == 7) {
+		out->type = SPEED_DIAL_INDIVIDUAL;
+		out->id = 9997777;
+	} else if (n == 9) {
+		out->type = SPEED_DIAL_ALL;
+		out->id = 0xFFFFFFu;
+	} else {
+		return false;
+	}
+	return true;
+}
 
 bool codeplug_contact(uint16_t index, contact_t *out)
 {

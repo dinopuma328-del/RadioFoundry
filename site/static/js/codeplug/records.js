@@ -10,6 +10,7 @@ import {
 	getFreq, putFreq, getBcdId, putBcdId, getTone, putTone, getName, putName, getCoord, coordBytes, u16, put16,
 } from "./fields.js";
 import { decodeArea, getKey, putKeys, keyValid, KEYS } from "./kv.js";
+import { decodeSpeedDial, putSpeedDial } from "./speeddial.js";
 
 export const LIMITS = {
 	channels: 1024, zones: 68, zoneChannels: 80, contacts: 1024, rxLists: 76, rxListContacts: 32,
@@ -313,7 +314,8 @@ export function encodeAprs(a, r) {
 // --- General settings, boot text (7.3.2, 7.2), the settings area's keys (codeplug-settings.md) ---
 
 // The settings area's keys (kv.js KEYS; arsServer, ipGateway: DMR IDs, 0 = off; the Settings > Sound tones: true on,
-// false off) are fields too: null when the key is absent (the radio keeps its own setting)
+// false off) are fields too: null when the key is absent (the radio keeps its own setting). speedDial: the ten slots
+// (speeddial.js), null for an empty one
 export function decodeGeneral(b) {
 	const g = b.subarray(GENERAL, GENERAL + GENERAL_SIZE);
 	const kv = decodeArea(b).entries;
@@ -325,6 +327,7 @@ export function decodeGeneral(b) {
 		bootLine1: getName(b, BOOT_TEXT, 16),
 		bootLine2: getName(b, BOOT_TEXT + 16, 16),
 		...Object.fromEntries(KEYS.map((row) => [row.name, getKey(kv, row)])),
+		speedDial: decodeSpeedDial(kv),
 	};
 }
 
@@ -348,4 +351,6 @@ export function encodeGeneral(s, b) {
 		if (was[row.name] !== v && (v === null || keyValid(row, v))) vals[row.name] = v;
 	}
 	if (Object.keys(vals).length) putKeys(b, vals);
+	// speed dial slots: only those that changed (speeddial.js); never over a newer area
+	if (s.speedDial) putSpeedDial(b, s.speedDial);
 }

@@ -26,7 +26,7 @@ typedef struct {
 // call type 3, an ID of 0 or above CODEPLUG_DMR_ID_MAX
 bool speed_dial_decode(const uint8_t *v, int n, speed_dial_t *out);
 
-// Slot n (0-9) from the codeplug settings area. False when the slot is empty or n is out of range
+// Slot n (0-9) from the codeplug settings area (CONFIG_SPEED_DIAL). False when the slot is empty or n is out of range
 bool speed_dial_get(uint8_t n, speed_dial_t *out);
 
 #endif

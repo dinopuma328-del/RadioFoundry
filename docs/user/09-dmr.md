@@ -93,6 +93,19 @@ picker's. **Up** from the top goes to the last contact.
 
 On an FM channel **Talk target** shows "Talk target: DMR channels only".
 
+### Speed dial
+
+Hold a digit, **0** to **9**, on Home on a DMR channel. The slot's talkgroup or person becomes the talk target for now
+and the radio shows "Talking to ...". Press **PTT** to call it. Nothing is sent before that. **Back** on Home goes back
+to the channel's default.
+
+Set the slots in the [Codeplug Editor](04-programming.md#speed-dial), **Radio** tab. A slot holds the talkgroup or ID
+itself, so it doesn't have to be a contact. An empty slot shows "Speed dial 2 is empty: set it in the Codeplug
+Editor". On an FM channel the radio shows "Speed dial: on DMR channels". In the VFO a held digit types the digit.
+
+A slot to a "disconnect" talkgroup (4000 on many networks) unlinks a repeater in two key presses: hold the digit,
+then a short **PTT**.
+
 ### Typing a talkgroup or ID
 
 On Home, type the number. Find lists "Talk to TG 3100" and "Private call 3100" (with a name when the ID is a contact).

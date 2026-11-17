@@ -73,7 +73,7 @@ TFTP ([USB network](15-usb-network.md#programming-over-the-network)).
 
 | Tab | Holds |
 |---|---|
-| Radio | DMR ID, radio name (callsign), boot text, group and private call hang times, ARS server, IP gateway |
+| Radio | DMR ID, radio name (callsign), boot text, group and private call hang times, ARS server, IP gateway, speed dial |
 | Channels | Every channel. The pencil button opens the full form: FM, DMR, scan and power, location, single frequency repeater |
 | Zones | Zones and their channels |
 | Contacts | Talkgroups and private-call contacts |
@@ -97,6 +97,15 @@ either: the radio keeps its own unless the software writes them in RadioFoundry'
 
 The page keeps the working codeplug in the browser, so closing or reloading the page doesn't lose edits. **New** starts
 over.
+
+### Speed dial
+
+The **Speed dial** table on the **Radio** tab has a row for each digit, **0** to **9**. Choose the call type (Group,
+Private or All call), then the ID and an optional name, or pick a contact to fill all three. **Clear** empties the
+row. On the radio, hold the digit on Home ([Speed dial](09-dmr.md#speed-dial)).
+
+The slots are kept in the settings area, like the ARS server. qdmr doesn't write them and leaves them as they are on
+the radio.
 
 ### Digital modes and systems
 

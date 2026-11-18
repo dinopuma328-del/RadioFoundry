@@ -219,6 +219,9 @@ CONFIG_CONTACT_EDIT ?= $(if $(and $(filter y,$(CONFIG_CHANNEL_EDIT)),$(filter y,
 CONFIG_SPEED_DIAL ?= $(CONFIG_DMR)
 # beeps and alert tones as PCM through the speaker (needs the board's PCM audio, which some radios have only with DMR)
 CONFIG_BEEP ?= y
+# signaling tones: Settings > Signaling tones, a chain of up to ten tones for the start of a transmission, its end and a
+# reception's end, on the speaker, on air or both, in DMR and FM (docs/spec/radio-features.md 4.3; needs BEEP)
+CONFIG_SIG_TONES ?= $(CONFIG_BEEP)
 # FM transmit tones: roger beep and the 1750 Hz repeater access burst (needs FM)
 CONFIG_FM_TX_TONES ?= $(CONFIG_FM)
 # DTMF transmit: keypad digits send touch tones while PTT is held on FM (needs FM; docs/spec/radio-features.md 3.7)
@@ -480,6 +483,11 @@ ifneq ($(call feature_on,VFO_DMR),)
   endif
   ifeq ($(call feature_on,DMR),)
     $(error CONFIG_VFO_DMR=y needs CONFIG_DMR=y)
+  endif
+endif
+ifneq ($(call feature_on,SIG_TONES),)
+  ifeq ($(call feature_on,BEEP),)
+    $(error CONFIG_SIG_TONES=y needs CONFIG_BEEP=y)
   endif
 endif
 $(foreach f,FM_TX_TONES DTMF VOX BATTERY_SAVE AM_RX APRS_AFSK,$(if $(and $(call feature_on,$(f)),$(if $(call feature_on,FM),,x)),$(error CONFIG_$(f)=y needs CONFIG_FM=y)))

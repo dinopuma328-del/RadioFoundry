@@ -350,6 +350,10 @@ export function encodeGeneral(s, b) {
 		const v = s[row.name] ?? null;
 		if (was[row.name] !== v && (v === null || keyValid(row, v))) vals[row.name] = v;
 	}
+	for (const row of RECORD_KEYS) {
+		const v = s[row.name] ?? null;
+		if (!sameRecord(was[row.name], v) && (v === null || recordValid(row, v))) vals[row.name] = v;
+	}
 	if (Object.keys(vals).length) putKeys(b, vals);
 	// speed dial slots: only those that changed (speeddial.js); never over a newer area
 	if (s.speedDial) putSpeedDial(b, s.speedDial);

@@ -100,6 +100,9 @@ continuation keeps the reserved bytes and the header length as it found them.
 | 0x0004 | TOT warning tone | bool | Off silences the tone before the transmit time-out | `sound_flags` bit 5 | Tones in the build (`CONFIG_BEEP`) |
 | 0x0005 | Battery tone | bool | Off silences the low and critical battery tones | `sound_flags` bit 6 | Tones in the build (`CONFIG_BEEP`) |
 | 0x0006 | TX denied tone | bool | Off silences the tone when PTT is refused or the time-out cuts a transmission | `sound_flags` bit 7 | Tones in the build (`CONFIG_BEEP`) |
+| 0x0007 | Start tone | record | The signaling tone of a transmission's start: outputs and chain (3.3) | `sig_dmr[0]`, `sig_fm[0]`, `sig_hz[0]`, `sig_ms[0]` | Signaling tones in the build (`CONFIG_SIG_TONES`) |
+| 0x0008 | End tone | record | The same for a transmission's end | `sig_dmr[1]`, `sig_fm[1]`, `sig_hz[1]`, `sig_ms[1]` | `CONFIG_SIG_TONES` |
+| 0x0009 | Idle tone | record | The same for a reception's end (no on-air output) | `sig_dmr[2]`, `sig_fm[2]`, `sig_hz[2]`, `sig_ms[2]` | `CONFIG_SIG_TONES` |
 | 0x0100 | Systems | record list | 0x0100-0x01FF: system n's record ([channel-modes.md](channel-modes.md) 7.1) | none (codeplug data) | the system's type built |
 | 0x0200 | System entries | record list | 0x0200-0x02FF: a system's sites, channels and plan rows ([channel-modes.md](channel-modes.md) 7.2) | none | the system's type built |
 | 0x0300 | System secrets | record list | 0x0300-0x03FF: system n's own secret ([channel-modes.md](channel-modes.md) 7.4) | none | the system's type built |
@@ -359,5 +362,5 @@ conversion copies the entries as they are. There is one key space for both forma
   radio accepts) is not built.
 - The header is outside the CRC. A damaged version byte reads as an invalid area (version 0) or as a newer one.
 - Per-channel settings: a key whose value starts with a channel number, or a table key. Not needed yet.
-- No key is a record yet. The firmware's set from the front (`CODEPLUG_KV_HEAD`) is built and tested; the Codeplug
-  Editor's comes with the first record key.
+- The signaling tone records (3.3) are the first record keys: the firmware sets them from the front
+  (`CODEPLUG_KV_HEAD`, `codeplug_keys_store_record`) and so does the Codeplug Editor (`putKeys`).

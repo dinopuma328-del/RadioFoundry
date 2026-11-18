@@ -412,6 +412,64 @@ function radioTab() {
 		return h("div", { class: "form-row" }, h("label", { for: "g-" + key }, label), sel,
 			h("span", { class: "small muted" }, t("editor.general.tone_help")));
 	};
+	// a signaling tone record of the settings area (kv.js RECORD_KEYS, codeplug-settings.md 3.3): Not set, or Set with the
+	// outputs and the ten steps. A value out of range is the Problems tab's to say
+	const sigBlock = (row) => {
+		const rec = g[row.name];
+		const id = `g-${row.name}`;
+		const put = (next) => change(t("editor.undo.edit"), () => (S.model.general = { ...S.model.general, [row.name]: next }));
+		const title = h("h4", { class: "sig-title" }, t(`editor.sig.${row.name.slice(3).toLowerCase()}`));
+		if (rec == null) {
+			return h("section", { class: "sig-card sig-off" }, h("div", { class: "sig-head" }, title,
+				h("span", { class: "small muted sig-state" }, t("editor.sig.unset")),
+				button(t("editor.sig.customize"), () => put({ dmr: 0, fm: 0, hz: Array(SIG_STEPS).fill(0), ms: Array(SIG_STEPS).fill(0) }), { quiet: true })));
+		}
+		const outputs = (key, air) => {
+			const o = h("select", { id: `${id}-${key}` },
+				...[0, 1, 2, 3, 4].filter((v) => air || (v !== 3 && v !== 4)).map((v) => h("option", { value: String(v) }, t(`editor.sig.out.${v}`))));
+			o.value = String(rec[key]);
+			o.addEventListener("change", () => put({ ...rec, [key]: Number(o.value) }));
+			return h("div", { class: "form-row" }, h("label", { for: o.id }, t(`editor.sig.${key}`)), o);
+		};
+		// a step's cell: a number that stays as typed until it is valid; an out of range one is marked, never clamped
+		const cell = (key, i, max, step) => {
+			const bad = rec[key][i] > max || rec[key][i] % step !== 0;
+			const inp = h("input", { type: "number", min: "0", max: String(max), step: String(step), value: String(rec[key][i]), inputmode: "numeric",
+				class: bad ? "sig-bad" : "", "aria-invalid": bad ? "true" : "false",
+				"aria-label": `${t("editor.sig.step", { n: i + 1 })} ${t(`editor.sig.${key === "hz" ? "hz" : "ms"}`)}` });
+			inp.addEventListener("change", () => {
+				const n = Math.trunc(Number(inp.value));
+				put({ ...rec, [key]: rec[key].map((x, j) => (j === i ? (Number.isFinite(n) && n >= 0 ? n : 0) : x)) });
+			});
+			return h("td", {}, inp);
+		};
+		// the chain ends at the first step of 0 ms (kv.js, sigtone.h), so the steps after it are shown dimmed
+		let ended = false;
+		const rows = Array.from({ length: SIG_STEPS }, (_, i) => {
+			const dim = ended;
+			if (rec.ms[i] === 0) ended = true;
+			return h("tr", { class: dim ? "sig-dim" : "" }, h("th", { scope: "row" }, String(i + 1)),
+				cell("hz", i, SIG_HZ_MAX, SIG_HZ_UNIT), cell("ms", i, SIG_MS_MAX, 10));
+		});
+		let total = 0;
+		for (const m of rec.ms) {
+			if (m === 0) break;
+			total += m;
+		}
+		const sum = h("p", { class: "small sig-total" + (total > SIG_MS_MAX ? " ed-err" : " muted") },
+			total === 0 ? t("editor.sig.empty") : t(total > SIG_MS_MAX ? "editor.sig.over" : "editor.sig.total", { ms: total, max: SIG_MS_MAX }));
+		const roll = h("div", { class: "sig-roll", role: "img", "aria-label": t("editor.sig.roll", { ms: total }) });
+		roll.innerHTML = sigRollSvg(rec);
+		const play = button(t("editor.sig.play"), () => sigPlay(rec, play, t), { quiet: true });
+		return h("section", { class: "sig-card" },
+			h("div", { class: "sig-head" }, title, play, button(t("editor.sig.reset"), () => put(null), { quiet: true })),
+			h("div", { class: "sig-body" },
+				h("div", { class: "sig-side" }, h("div", { class: "sig-outs" }, outputs("dmr", row.air), outputs("fm", row.fmAir)), roll, sum),
+				h("div", { class: "sig-tables" }, ...[rows.slice(0, SIG_STEPS / 2), rows.slice(SIG_STEPS / 2)].map((half) =>
+					h("table", { class: "sig-steps" },
+						h("thead", {}, h("tr", {}, h("th", {}, t("editor.sig.step_col")), h("th", {}, t("editor.sig.hz")), h("th", {}, t("editor.sig.ms")))),
+						h("tbody", {}, ...half))))));
+	};
 	const parts = [
 		h("div", { class: "form-grid ed-radio-form" },
 			field("dmrId", t("editor.general.dmr_id"), 8, t("editor.general.dmr_id_help"), num(0, 0xFFFFFF)),

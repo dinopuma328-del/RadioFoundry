@@ -12,7 +12,7 @@ import { decode, encode, empty, remove, validate, newChannel, newContact, number
 import { LIMITS, decodeGeneral } from "../codeplug/records.js";
 import { CpsSerial, TransportError, estimate, keepIdentity, IDENTITY, iddbRanges } from "../codeplug/transport.js";
 import { FastError } from "../codeplug/fastlink.js";
-import { areaForWrite, KEYS, ID_MAX } from "../codeplug/kv.js";
+import { areaForWrite, KEYS, RECORD_KEYS, SIG_HZ_MAX, SIG_HZ_UNIT, SIG_MS_MAX, SIG_STEPS, ID_MAX } from "../codeplug/kv.js";
 import { SPEED_SLOTS, SPEED_TYPES, SPEED_NAME_LEN } from "../codeplug/speeddial.js";
 import { toSerial, CLICK_WAIT_MS } from "../flasher/netmode.js";
 import { convert as convertDb, readHeader as dbHeader } from "../codeplug/iddb.js";
@@ -485,6 +485,9 @@ function radioTab() {
 			onOff("batteryTone", t("editor.general.battery_tone")),
 			onOff("txDenyTone", t("editor.general.tx_deny_tone")),
 			...modeSettingsPart(api(), features())),
+		h("h3", {}, t("editor.sig.title")),
+		h("p", { class: "small muted" }, t("editor.sig.help")),
+		h("div", { class: "sig-grid" }, ...RECORD_KEYS.map(sigBlock)),
 		speedDialPart(),
 	];
 	if (S.conn) {
@@ -494,6 +497,59 @@ function radioTab() {
 			h("dt", {}, t("editor.firmware")), h("dd", {}, p?.git || "?")));
 	}
 	return h("div", {}, ...parts);
+}
+
+// --- Signaling tone roll and preview ---
+
+// The chain as a pitch against time: a bar a step, as wide as it lasts on a fixed axis of SIG_MS_MAX and as high as its
+// frequency (0 to SIG_HZ_MAX). A pause is a tick on the baseline. Steps after the first of 0 ms are not drawn; what is
+// past the limit is marked. Numbers only, so it is safe to set as markup
+function sigRollSvg(rec) {
+	const W = 900, H = 72, pad = 2;
+	let x = 0, out = "";
+	for (let i = 0; i < SIG_STEPS && rec.ms[i] > 0; i++) {
+		const w = rec.ms[i], hz = Math.min(rec.hz[i], SIG_HZ_MAX);
+		const over = x + w > SIG_MS_MAX;
+		const cls = over ? "sig-r-over" : "sig-r-bar";
+		if (hz === 0) out += `<rect class="sig-r-pause" x="${x}" y="${H - 3}" width="${Math.max(w - 2, 1)}" height="3"/>`;
+		else {
+			const bh = Math.max(4, Math.round((hz / SIG_HZ_MAX) * (H - pad * 2)));
+			out += `<rect class="${cls}" x="${x}" y="${H - bh}" width="${Math.max(w - 2, 1)}" height="${bh}" rx="2"/>`;
+		}
+		x += w;
+	}
+	const grid = [300, 600].map((g) => `<line class="sig-r-grid" x1="${g}" x2="${g}" y1="0" y2="${H}"/>`).join("");
+	return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" focusable="false"><rect class="sig-r-bg" width="${W}" height="${H}" rx="4"/>${grid}${out}</svg>`;
+}
+
+let sigAudio = null;
+// Plays the chain on the browser's speaker: a sine a step with 2 ms fades, as the radio makes it (sigtone.c)
+function sigPlay(rec, btn, t) {
+	try {
+		sigAudio = sigAudio || new (window.AudioContext || window.webkitAudioContext)();
+		const ctx = sigAudio;
+		const now = ctx.currentTime + 0.05;
+		let at = now;
+		for (let i = 0; i < SIG_STEPS && rec.ms[i] > 0; i++) {
+			const d = Math.min(rec.ms[i], SIG_MS_MAX) / 1000;
+			if (rec.hz[i] > 0) {
+				const o = ctx.createOscillator(), g = ctx.createGain();
+				o.frequency.value = Math.min(rec.hz[i], SIG_HZ_MAX);
+				g.gain.setValueAtTime(0, at);
+				g.gain.linearRampToValueAtTime(0.25, at + 0.002);
+				g.gain.setValueAtTime(0.25, Math.max(at + 0.002, at + d - 0.002));
+				g.gain.linearRampToValueAtTime(0, at + d);
+				o.connect(g).connect(ctx.destination);
+				o.start(at);
+				o.stop(at + d + 0.01);
+			}
+			at += d;
+		}
+		btn.disabled = true;
+		setTimeout(() => { btn.disabled = false; }, Math.max(100, (at - now) * 1000 + 100));
+	} catch {
+		btn.textContent = t("editor.sig.no_audio");
+	}
 }
 
 // The speed dial slots (codeplug-settings.md, "Speed dial slots"): a row per digit held on Home, its call type, ID and

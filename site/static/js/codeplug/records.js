@@ -9,7 +9,7 @@ import { EE, FL } from "./image.js";
 import {
 	getFreq, putFreq, getBcdId, putBcdId, getTone, putTone, getName, putName, getCoord, coordBytes, u16, put16,
 } from "./fields.js";
-import { decodeArea, getKey, putKeys, keyValid, KEYS } from "./kv.js";
+import { decodeArea, getKey, getRecord, sameRecord, recordValid, putKeys, keyValid, KEYS, RECORD_KEYS } from "./kv.js";
 import { decodeSpeedDial, putSpeedDial } from "./speeddial.js";
 
 export const LIMITS = {
@@ -327,6 +327,7 @@ export function decodeGeneral(b) {
 		bootLine1: getName(b, BOOT_TEXT, 16),
 		bootLine2: getName(b, BOOT_TEXT + 16, 16),
 		...Object.fromEntries(KEYS.map((row) => [row.name, getKey(kv, row)])),
+		...Object.fromEntries(RECORD_KEYS.map((row) => [row.name, getRecord(kv, row)])),
 		speedDial: decodeSpeedDial(kv),
 	};
 }

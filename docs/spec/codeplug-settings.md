@@ -114,7 +114,7 @@ continuation keeps the reserved bytes and the header length as it found them.
 | 0x1800 | Target lists | record list | 0x1800-0x18FF: receive lists of targets ([channel-modes.md](channel-modes.md) 5.3) | none | a kind that uses them built |
 | 0x1900 | Traffic keys | record list | 0x1900-0x1CFF: keys that encrypt traffic, each a system's ([channel-modes.md](channel-modes.md) 5.4) | none | a type that uses them built |
 | 0x1D00 | Zone tags | record list | 0x1D00-0x1DFF: reserved for per-zone mode records ([channel-modes.md](channel-modes.md) 5.6) | none | none yet |
-| 0x1E00 | Speed dial | record list | 0x1E00-0x1EFF: the target of a digit held on Home, slot n at 0x1E00 + n (3.3); slots 0-9 are read | none | Speed dial in the build (`CONFIG_SPEED_DIAL`) |
+| 0x1E00 | Speed dial | record list | 0x1E00-0x1EFF: the target of a digit held on Home, slot n at 0x1E00 + n (3.4); slots 0-9 are read | none | Speed dial in the build (`CONFIG_SPEED_DIAL`) |
 
 **Radio's own copy** is the setting's field in the settings store ([settings-store.md](settings-store.md) 3). Every
 scalar key has one (3.2).
@@ -180,7 +180,30 @@ button's action. Ranges are assigned in blocks of 256 from 0x0100 up (0x0100-0x0
 to its block and no further without a new row. A list that may outgrow a block is split into two families by the
 change that needs it, never by moving the first.
 
-### 3.3 Speed dial slots
+### 3.3 The signaling tone records
+
+One record per event, because a chain's steps are only valid together and the outputs go with the event they sound
+for. 32 bytes, little endian (the first version's record had five steps and 17 bytes: the first five steps are laid out as
+it had them, and the other five follow):
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | Output in DMR: 0 the radio's own sound, 1 off, 2 speaker, 3 on air, 4 speaker and on air |
+| 1 | 1 | Output in FM, the same values |
+| 2 | 10 | Frequencies of steps 1 to 5 in Hz, u16 each; 0 is a pause. Multiples of 10, at most 3400 |
+| 12 | 5 | Lengths of steps 1 to 5 in units of 10 ms. A step of length 0 ends the chain, and a chain with no step is the event's own sound. At most 90 (900 ms) |
+| 17 | 10 | Frequencies of steps 6 to 10, as above |
+| 27 | 5 | Lengths of steps 6 to 10, as above |
+
+- A record shorter than 32 bytes (the first version's 17, say) reads with the missing fields zero. A longer one (a later version) is read from the
+  front.
+- The record is absent for the reader when a field is outside what the setting takes: an output of 3 or 4 for the end
+  of a reception, a frequency over 3400 Hz or not a multiple of 10, or a length over 900 ms. Nothing is
+  clamped (3.1).
+- A record whose key is present holds over the radio's own copy (5.2). The radio writes the whole record when one of
+  its fields changes from the menu, and keeps the bytes after the 32nd (4).
+
+### 3.4 Speed dial slots
 
 A digit held on Home (0-9) is a slot: key 0x1E00 + digit. Its record names a DMR call target, which becomes the
 temporary talk target, as one picked in the talk target picker ([ui.md](ui.md) 3). Nothing is sent until PTT.
@@ -331,7 +354,7 @@ The editor's keys are one table, `KEYS` in `kv.js`: the model's field, the key, 
 the range. Decoding, encoding and validation follow the row. The Radio tab shows each key as a field. A field left
 empty is an absent key. Typing a value writes the key; for an ID, 0 turns the setting off.
 
-The speed dial slots (3.3) are a table on the Radio tab (`speeddial.js`): a row per digit, its call type, ID and
+The speed dial slots (3.4) are a table on the Radio tab (`speeddial.js`): a row per digit, its call type, ID and
 name, or a contact copied into them. An edit writes only the slots that read differently, each record from the front;
 a slot the radio would read as empty is a Problems error and isn't written.
 

@@ -11,6 +11,7 @@
 #include "codeplug/codeplug.h"
 #include "codeplug/codeplug_kv.h"
 #include "codeplug/speed_dial.h"
+#include "fuzz.h"
 #include "storage/storage.h"
 #include "sim/sim_flash.h"
 
@@ -641,6 +642,41 @@ static void test_speed_dial(void)
 	CHECK(codeplug_kv_remove(CODEPLUG_KEY_SPEED_DIAL + 4) && !speed_dial_get(4, &s));
 }
 
+// The slot records come from the codeplug, written by any tool: mutated records (bit flips, magic bytes, cuts, longer
+// ones) never read past their length, and what reads as a slot holds what a slot can hold
+static void test_speed_dial_fuzz(void)
+{
+	uint8_t seeds[3][SPEED_DIAL_REC_LEN];
+	uint8_t buf[SPEED_DIAL_REC_LEN * 2];
+	speed_dial_t s;
+	fuzz_t f;
+	speed_rec(seeds[0], SPEED_DIAL_GROUP, 4000, "Unlink");
+	speed_rec(seeds[1], SPEED_DIAL_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP");
+	speed_rec(seeds[2], SPEED_DIAL_ALL, 0xFFFFFFu, "");
+	fuzz_init(&f, 0x5D1A1);
+	for (long i = 0; i < fuzz_iters(20000); i++) {
+		memcpy(buf, seeds[i % 3], SPEED_DIAL_REC_LEN);
+		int n = fuzz_mutate(&f, buf, SPEED_DIAL_REC_LEN, (int)sizeof buf);
+		uint8_t *p = fuzz_exact(buf, n);
+		memset(&s, 0xA5, sizeof s);
+		if (speed_dial_decode(p, n, &s)) {
+			CHECK(n >= (int)SPEED_DIAL_REC_LEN);
+			CHECK(s.type <= SPEED_DIAL_ALL);
+			CHECK(s.type == SPEED_DIAL_ALL ? s.id == 0xFFFFFFu : (s.id >= 1u && s.id <= CODEPLUG_DMR_ID_MAX));
+			CHECK(strlen(s.name) <= CODEPLUG_NAME_LEN);
+			for (const char *c = s.name; *c; c++) {
+				CHECK((uint8_t)*c != 0xFFu);
+			}
+		} else {
+			CHECK(n < (int)SPEED_DIAL_REC_LEN || (p[0] & 3u) == 3u ||
+			      ((p[0] & 3u) != SPEED_DIAL_ALL &&
+			       ((p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16)) == 0u ||
+				(p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16)) > CODEPLUG_DMR_ID_MAX)));
+		}
+		free(p);
+	}
+}
+
 int main(void)
 {
 	test_blank();
@@ -659,6 +695,7 @@ int main(void)
 	test_serial_commit();
 	test_power_cut();
 	test_speed_dial();
+	test_speed_dial_fuzz();
 	sim_flash_free();
 	if (failures) {
 		printf("codeplugKvTest: %d failure(s)\n", failures);

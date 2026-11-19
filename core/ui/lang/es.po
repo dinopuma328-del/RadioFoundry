@@ -358,24 +358,44 @@ msgid "Default: "
 msgstr "Predet.: "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_DMR_ONLY"
-msgid "Speed dial: on DMR channels"
-msgstr "Marcado rápido: solo canales DMR"
+msgctxt "ONEKEY_TOAST_DMR_ONLY"
+msgid "One key: on DMR channels"
+msgstr "Tecla rápida: solo canales DMR"
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_SPEED_DIAL"
-msgid "Speed dial "
-msgstr "Marcado rápido "
+msgctxt "ONEKEY_TOAST_KEY"
+msgid "One key "
+msgstr "Tecla rápida "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_IS_EMPTY_EDITOR"
+msgctxt "ONEKEY_TOAST_IS_EMPTY"
 msgid " is empty: set it in the Codeplug Editor"
-msgstr " está vacío: configúralo en el Codeplug Editor"
+msgstr " sin configurar: hazlo en el Codeplug Editor"
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
+msgid "Messages: not in this build"
+msgstr "Mensajes: no disponible"
 
 #: core/ui/ui_app.c
-msgctxt "WHY_SPEED_DIAL_NOT_IN_BUILD"
-msgid "Speed dial: not in this build"
-msgstr "Marcado rápido: no disponible"
+msgctxt "ONEKEY_TOAST_QUICK_TEXT"
+msgid "Quick text "
+msgstr "Texto rápido "
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "MSG_TOAST_SEND_FAILED"
+msgid "Couldn't send: try again"
+msgstr "No se envió: reintenta"
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "TOAST_SENDING_TO"
+msgid "Sending to "
+msgstr "Enviando a "
+
+#: core/ui/ui_app.c
+msgctxt "WHY_ONE_KEY_NOT_IN_BUILD"
+msgid "One key operation: not in this build"
+msgstr "Tecla rápida: no disponible"
 
 #: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"
@@ -1543,11 +1563,6 @@ msgid "Poll short data"
 msgstr "Pedir datos cortos"
 
 #: core/ui/ui_menus.c
-msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
-msgid "Messages: not in this build"
-msgstr "Mensajes: no disponible"
-
-#: core/ui/ui_menus.c
 msgctxt "ACT_TOAST_CHECKING"
 msgid "Checking "
 msgstr "Probando "
@@ -1636,16 +1651,6 @@ msgstr "Pedir confirmación"
 msgctxt "MSG_LABEL_INCLUDE_POSITION"
 msgid "Include position"
 msgstr "Incluir posición"
-
-#: core/ui/ui_menus.c
-msgctxt "MSG_TOAST_SEND_FAILED"
-msgid "Couldn't send: try again"
-msgstr "No se envió: reintenta"
-
-#: core/ui/ui_menus.c
-msgctxt "TOAST_SENDING_TO"
-msgid "Sending to "
-msgstr "Enviando a "
 
 #: core/ui/ui_menus.c
 msgctxt "TEXT_TITLE_CALLSIGN"

@@ -15,6 +15,7 @@
 #include "codeplug/codeplug.h"
 #include "codeplug/codeplug_modes.h"
 #include "codeplug/codeplug_tag.h"
+#include "codeplug/one_key.h"
 #if CONFIG_P25
 #include "p25/p25_codeplug.h"
 #endif
@@ -388,13 +389,22 @@ static void ui_text_open_message(bool aprs);
 #endif
 static bool compose_aprs(void) { return aprs_composing; }
 
+// The codeplug's quick texts (codeplug/one_key.h, with one key operation) follow the canned ones: their numbers, read
+// when the composer opens
+#if CONFIG_ONE_KEY && CONFIG_DMR_SMS
+static uint8_t quick_list[QUICK_TEXTS];
+static uint8_t quick_n;
+#else
+#define quick_n		0u
+#endif
+
 void ui_aprs_compose(const char *call)
 {
 	str_copy(aprs_compose_to, sizeof aprs_compose_to, call);
 	ui_push(SCR_COMPOSE, 1);
 }
 
-static uint16_t compose_count(void) { return CANNED_N + 1u + (compose_aprs() ? 3u : 0u); }
+static uint16_t compose_count(void) { return CANNED_N + quick_n + 1u + (compose_aprs() ? 3u : 0u); }
 
 static void compose_item(uint16_t i, ui_item_t *it)
 {
@@ -412,7 +422,23 @@ static void compose_item(uint16_t i, ui_item_t *it)
 		sb_chr(&b, '"');
 		sb_str(&b, tr(canned[i]));
 		sb_chr(&b, '"');
-	} else if (i == CANNED_N) {
+		return;
+	}
+	i -= CANNED_N;
+#if CONFIG_ONE_KEY && CONFIG_DMR_SMS
+	if (i < quick_n) {
+		char text[QUICK_TEXT_MAX + 1];
+		sbuf_t b;
+		sb_init(&b, it->label, sizeof it->label);
+		sb_chr(&b, '"');
+		if (quick_text_get(quick_list[i], text, sizeof text))
+			sb_str(&b, text);
+		sb_chr(&b, '"');
+		return;
+	}
+#endif
+	i = (uint16_t)(i - quick_n + CANNED_N);	// the rows after the quick texts, numbered as without them
+	if (i == CANNED_N) {
 		str_copy(it->label, sizeof it->label, TR(MSG_ROW_WRITE, "Write..."));
 	} else if (i == CANNED_N + 1u) {
 		str_copy(it->label, sizeof it->label, TR(MSG_LABEL_REQUEST_ACK, "Request acknowledgment"));
@@ -471,8 +497,19 @@ static void compose_select(uint16_t i, bool hold)
 	if (i < CANNED_N) {
 		bool aprs = compose_aprs();
 		send_text(tr(canned[i]), aprs);
+		return;
 	}
-	else if (i == CANNED_N) {
+	i -= CANNED_N;
+#if CONFIG_ONE_KEY && CONFIG_DMR_SMS
+	if (i < quick_n) {
+		char text[QUICK_TEXT_MAX + 1];
+		if (quick_text_get(quick_list[i], text, sizeof text))
+			send_text(text, compose_aprs());
+		return;
+	}
+#endif
+	i = (uint16_t)(i - quick_n + CANNED_N);	// the rows after the quick texts, numbered as without them
+	if (i == CANNED_N) {
 #if CONFIG_DMR_SMS || CONFIG_APRS_AFSK
 		ui_text_open_message(compose_aprs());
 	#endif
@@ -497,6 +534,14 @@ static void compose_enter(void)
 	str_copy(aprs_to, sizeof aprs_to, compose_aprs() ? aprs_compose_to : "");
 	aprs_compose_to[0] = 0;
 	aprs_message_flags = APRS_MSG_ACK;
+#if CONFIG_ONE_KEY && CONFIG_DMR_SMS
+	char text[QUICK_TEXT_MAX + 1];
+	quick_n = 0;
+	for (uint8_t n = 0; n < QUICK_TEXTS; n++) {
+		if (quick_text_get(n, text, sizeof text))
+			quick_list[quick_n++] = n;
+	}
+#endif
 }
 
 static const ui_scr_def_t compose_screen = {

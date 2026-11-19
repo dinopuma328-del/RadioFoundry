@@ -114,7 +114,8 @@ continuation keeps the reserved bytes and the header length as it found them.
 | 0x1800 | Target lists | record list | 0x1800-0x18FF: receive lists of targets ([channel-modes.md](channel-modes.md) 5.3) | none | a kind that uses them built |
 | 0x1900 | Traffic keys | record list | 0x1900-0x1CFF: keys that encrypt traffic, each a system's ([channel-modes.md](channel-modes.md) 5.4) | none | a type that uses them built |
 | 0x1D00 | Zone tags | record list | 0x1D00-0x1DFF: reserved for per-zone mode records ([channel-modes.md](channel-modes.md) 5.6) | none | none yet |
-| 0x1E00 | Speed dial | record list | 0x1E00-0x1EFF: the target of a digit held on Home, slot n at 0x1E00 + n (3.4); slots 0-9 are read | none | Speed dial in the build (`CONFIG_SPEED_DIAL`) |
+| 0x1E00 | One key operation | record list | 0x1E00-0x1EFF: what a digit held on Home does, slot n at 0x1E00 + n (3.4); slots 0-9 are read | none | One key operation in the build (`CONFIG_ONE_KEY`) |
+| 0x1F00 | Quick texts | text list | 0x1F00-0x1FFF: preset text messages, quick text n at 0x1F00 + n (3.5); 0-15 are read | none | One key operation and text messages in the build (`CONFIG_ONE_KEY`, `CONFIG_DMR_SMS`) |
 
 **Radio's own copy** is the setting's field in the settings store ([settings-store.md](settings-store.md) 3). Every
 scalar key has one (3.2).
@@ -203,26 +204,47 @@ it had them, and the other five follow):
 - A record whose key is present holds over the radio's own copy (5.2). The radio writes the whole record when one of
   its fields changes from the menu, and keeps the bytes after the 32nd (4).
 
-### 3.4 Speed dial slots
+### 3.4 One key operation slots
 
-A digit held on Home (0-9) is a slot: key 0x1E00 + digit. Its record names a DMR call target, which becomes the
-temporary talk target, as one picked in the talk target picker ([ui.md](ui.md) 3). Nothing is sent until PTT.
-The rest of the family's block is free for more slots. 20 bytes, little endian:
+A digit held on Home (0-9) is a slot: key 0x1E00 + digit. Its record names an action and a DMR call target:
+
+| Action | What a held digit does |
+|---|---|
+| 0 call | the target becomes the temporary talk target, as one picked in the talk target picker ([ui.md](ui.md) 3). Nothing is sent until PTT |
+| 1 text | the quick text the record names (3.5) is sent to the target at once, in the text message format the radio is set to ([dmr-data.md](dmr-data.md) 5) |
+
+The rest of the family's block is free for more slots. 21 bytes, little endian:
 
 | Offset | Size | Field |
 |---|---|---|
-| 0 | 1 | Flags: bits 0-1 call type (0 individual, 1 group, 2 all call), as a target's ([channel-modes.md](channel-modes.md) 5.2); bits 2-7 reserved, written 0, ignored by a reader |
+| 0 | 1 | Flags: bits 0-1 call type (0 individual, 1 group, 2 all call), as a target's ([channel-modes.md](channel-modes.md) 5.2); bits 2-3 action (0 call, 1 text); bits 4-7 reserved, written 0, ignored by a reader |
 | 1 | 3 | DMR ID, u24. Ignored for all call (0xFFFFFF on the air) |
 | 4 | 16 | Name, as a channel record's (0xFF or NUL padded); empty for none |
+| 20 | 1 | Text: the quick text's number, 0-15. Ignored for a call, written 0 |
 
-- A slot is empty when its key is absent, or when the record is absent for the reader: shorter than 20 bytes, call
-  type 3, or an individual or group ID of 0 or above 16776415 (`CODEPLUG_DMR_ID_MAX`). Nothing is clamped (3.1).
+- A slot is empty when its key is absent, or when the record is absent for the reader: shorter than 21 bytes, call
+  type 3, action 2 or 3, an individual or group ID of 0 or above 16776415 (`CODEPLUG_DMR_ID_MAX`), or a text to all
+  call or with a text number of 16 or more. Nothing is clamped (3.1).
 - A longer record (a later version's) is read from the front.
 - The slot holds the target itself, not a contact number: it works for a talkgroup that is not in the contacts, and
   editing the contacts can't point it at another one.
-- The radio only reads the slots (`speed_dial_get`, `core/codeplug/speed_dial.c`, `CONFIG_SPEED_DIAL`). The Codeplug Editor writes them.
-  A family has no copy in the settings store (3.2): with another firmware's codeplug every slot is empty.
+- A text slot whose quick text is absent or empty sends nothing and says so.
+- The radio only reads the slots (`one_key_get`, `core/codeplug/one_key.c`, `CONFIG_ONE_KEY`). The Codeplug Editor
+  writes them. A family has no copy in the settings store (3.2): with another firmware's codeplug every slot is empty.
 - On a channel that isn't DMR, or in the VFO, a held digit doesn't use the slots ([ui.md](ui.md) 3).
+
+### 3.5 Quick texts
+
+Preset text messages: quick text n is key 0x1F00 + n, n 0-15. The value is the text, ISO 8859-1, one byte per
+character, at most 64 bytes, with no terminator. A one key operation slot sends one (3.4), and the message composer
+lists them after its own presets ([ui.md](ui.md) 8).
+
+- The text ends at the first 0x00 or 0xFF, and a reader takes at most the first 64 bytes. A quick text with no
+  character before that is absent.
+- 16 texts of 64 bytes take about 1 KB of the 4 KB area (2): the limits keep room for the other keys.
+- The radio and the Codeplug Editor show quick text n as number n + 1 ("Quick text 3" is key 0x1F02).
+- The radio only reads them (`quick_text_get`, `core/codeplug/one_key.c`, `CONFIG_ONE_KEY` with `CONFIG_DMR_SMS`).
+  The Codeplug Editor writes them.
 
 ## 4. Rules for readers and writers
 
@@ -354,9 +376,11 @@ The editor's keys are one table, `KEYS` in `kv.js`: the model's field, the key, 
 the range. Decoding, encoding and validation follow the row. The Radio tab shows each key as a field. A field left
 empty is an absent key. Typing a value writes the key; for an ID, 0 turns the setting off.
 
-The speed dial slots (3.4) are a table on the Radio tab (`speeddial.js`): a row per digit, its call type, ID and
-name, or a contact copied into them. An edit writes only the slots that read differently, each record from the front;
-a slot the radio would read as empty is a Problems error and isn't written.
+The one key operation slots (3.4) are a table on the Radio tab (`onekey.js`): a row per digit, its action, call type,
+ID, name and quick text, or a contact copied into the target. The quick texts (3.5) are a list below it. An edit
+writes only the slots and texts that read differently, each slot record from the front; a slot or text the radio
+would read as absent is a Problems error and isn't written. A text slot whose quick text is empty is a warning.
+Quick texts are numbered from 1 on the page and on the radio, as key 0x1F00 + number - 1.
 
 The editor reads and writes the sector with the other EEPROM regions and keeps entries it doesn't know. On a write
 to a radio it sends (`areaForWrite`):

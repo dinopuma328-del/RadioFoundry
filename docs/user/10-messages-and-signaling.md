@@ -50,7 +50,8 @@ The radio keeps DMR and APRS messages in memory. They are lost when the radio tu
 1. Open the actions for the person or talkgroup. Press **#** on Home for the last caller, or **#** on a contact.
 2. Press **3** (Message).
 3. Pick a preset ("OK", "On my way", "Call me" or "Can't talk now"), or choose **Write...** to type your own text.
-   Press **OK** to send. Presets are sent in the radio's language (Settings > Display > Language).
+   Press **OK** to send. Presets are sent in the radio's language (Settings > Display > Language). The quick texts
+   set in the [Codeplug Editor](04-programming.md#one-key-operation) follow the presets, sent as written.
 
 <img src="../ux/screens/160x120i5/compose.png" width="200" alt="The message composer">
 

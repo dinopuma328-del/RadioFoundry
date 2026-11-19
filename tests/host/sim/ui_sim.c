@@ -81,7 +81,7 @@
 #include "stubentry/stub_entry.h"
 #include "ui/ui_svc_aprs.h"
 #include "codeplug/codeplug_tag.h"
-#include "codeplug/speed_dial.h"
+#include "codeplug/one_key.h"
 #if CONFIG_P25
 #include "p25/p25_codeplug.h"
 #include "radio/radio_p25.h"
@@ -1051,24 +1051,43 @@ bool ui_svc_write_contact(uint16_t index, const contact_t *c)
 }
 #endif
 
-// Speed dial (core/codeplug/speed_dial.c reads the settings area; tested in codeplugKvTest): slot 4 a talkgroup that
-// is not in the contacts, slot 7 a person, slot 9 all call; the rest empty
-bool speed_dial_get(uint8_t n, speed_dial_t *out)
+// One key operation and quick texts (core/codeplug/one_key.c reads the settings area; tested in codeplugKvTest).
+// Slot 4 calls a talkgroup that is not in the contacts, 7 a person, 9 all call; slot 5 sends quick text 2 to talkgroup
+// 91, slot 6 quick text 1 to a person, slot 8 quick text 6 (empty) to talkgroup 91; the rest are empty. The quick texts
+// exist only after the "qtext" script word, so the gallery's composer stays as it was
+static bool sim_quick_texts;
+
+bool one_key_get(uint8_t n, one_key_t *out)
 {
+	static const struct { uint8_t n, type, action, text; uint32_t id; const char *name; } slots[] = {
+		{ 4, ONE_KEY_GROUP, ONE_KEY_CALL, 0, 4000, "Unlink" },
+		{ 7, ONE_KEY_INDIVIDUAL, ONE_KEY_CALL, 0, 9997777, "" },
+		{ 9, ONE_KEY_ALL, ONE_KEY_CALL, 0, 0xFFFFFFu, "" },
+		{ 5, ONE_KEY_GROUP, ONE_KEY_TEXT, 1, 91, "World" },
+		{ 6, ONE_KEY_INDIVIDUAL, ONE_KEY_TEXT, 0, 9997777, "Bob" },
+		{ 8, ONE_KEY_GROUP, ONE_KEY_TEXT, 5, 91, "" },
+	};
 	memset(out, 0, sizeof *out);
-	if (n == 4) {
-		out->type = SPEED_DIAL_GROUP;
-		out->id = 4000;
-		strcpy(out->name, "Unlink");
-	} else if (n == 7) {
-		out->type = SPEED_DIAL_INDIVIDUAL;
-		out->id = 9997777;
-	} else if (n == 9) {
-		out->type = SPEED_DIAL_ALL;
-		out->id = 0xFFFFFFu;
-	} else {
-		return false;
+	for (size_t i = 0; i < sizeof slots / sizeof slots[0]; i++) {
+		if (slots[i].n == n) {
+			out->type = slots[i].type;
+			out->action = slots[i].action;
+			out->text = slots[i].text;
+			out->id = slots[i].id;
+			strcpy(out->name, slots[i].name);
+			return true;
+		}
 	}
+	return false;
+}
+
+bool quick_text_get(uint8_t n, char *out, size_t cap)
+{
+	static const char *const texts[] = { "QRV", "Going QRT now", NULL, "Net starts in 5 minutes" };
+	out[0] = '\0';
+	if (!sim_quick_texts || n >= sizeof texts / sizeof texts[0] || texts[n] == NULL)
+		return false;
+	snprintf(out, cap, "%s", texts[n]);
 	return true;
 }
 
@@ -2354,6 +2373,7 @@ void sim_reset(const sim_geom_t *g, sim_map_t map)
 {
 	emergency_on = false;
 	sim_foreign = sim_held = false;
+	sim_quick_texts = false;
 	disp.width = g->w;
 	disp.height = g->h;
 	disp.bpp = g->bpp;
@@ -2792,6 +2812,10 @@ static bool check(const char *kv, char *err, size_t len)
 
 static bool run_token(char *t, char *err, size_t len)
 {
+	if (strcmp(t, "qtext") == 0) {
+		sim_quick_texts = true;
+		return true;
+	}
 	char *arg = strchr(t, ':');
 	if (arg != NULL)
 		*arg++ = 0;

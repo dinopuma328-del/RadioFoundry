@@ -73,7 +73,7 @@ TFTP ([USB network](15-usb-network.md#programming-over-the-network)).
 
 | Tab | Holds |
 |---|---|
-| Radio | DMR ID, radio name (callsign), boot text, group and private call hang times, ARS server, IP gateway, speed dial |
+| Radio | DMR ID, radio name (callsign), boot text, group and private call hang times, ARS server, IP gateway, one key operation, quick texts |
 | Channels | Every channel. The pencil button opens the full form: FM, DMR, scan and power, location, single frequency repeater |
 | Zones | Zones and their channels |
 | Contacts | Talkgroups and private-call contacts |
@@ -98,14 +98,22 @@ either: the radio keeps its own unless the software writes them in RadioFoundry'
 The page keeps the working codeplug in the browser, so closing or reloading the page doesn't lose edits. **New** starts
 over.
 
-### Speed dial
+### One key operation
 
-The **Speed dial** table on the **Radio** tab has a row for each digit, **0** to **9**. Choose the call type (Group,
-Private or All call), then the ID and an optional name, or pick a contact to fill all three. **Clear** empties the
-row. On the radio, hold the digit on Home ([Speed dial](09-dmr.md#speed-dial)).
+The **One key operation** table on the **Radio** tab has a row for each digit, **0** to **9**:
 
-The slots are kept in the settings area, like the ARS server. qdmr doesn't write them and leaves them as they are on
-the radio.
+| Column | |
+|---|---|
+| Action | **Call**: holding the digit makes the target the talk target. **Text**: holding the digit sends a quick text to the target |
+| Call type, ID, name | The target: Group, Private or All call, its ID and an optional name. **Copy a contact** fills all three |
+| Quick text | For a text: which quick text it sends. A text goes to a group or a person, not to All call |
+
+**Clear** empties the row. Below the table, **Quick texts** has 16 preset messages of up to 64 characters (letters of
+ISO 8859-1). They are also listed in the radio's message composer, after its own presets. On the radio, hold the
+digit on Home ([One key operation](09-dmr.md#one-key-operation)).
+
+The slots and the quick texts are kept in the settings area, like the ARS server. qdmr doesn't write them and leaves
+them as they are on the radio.
 
 ### Digital modes and systems
 

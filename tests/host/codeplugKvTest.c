@@ -10,7 +10,7 @@
 #include <string.h>
 #include "codeplug/codeplug.h"
 #include "codeplug/codeplug_kv.h"
-#include "codeplug/speed_dial.h"
+#include "codeplug/one_key.h"
 #include "fuzz.h"
 #include "storage/storage.h"
 #include "sim/sim_flash.h"
@@ -588,90 +588,142 @@ static void test_power_cut(void)
 	CHECK(o > 0 && nw > 0);
 }
 
-// Speed dial slots (spec, "Speed dial slots"): the record read from the front; a value a slot can't take reads as an
-// empty slot
-static void speed_rec(uint8_t *r, uint8_t flags, uint32_t id, const char *name)
+// One key operation slots (spec, "One key operation slots"): the record read from the front; a value a slot can't
+// take reads as an empty slot
+static void key_rec(uint8_t *r, uint8_t flags, uint32_t id, const char *name, uint8_t text)
 {
-	memset(r, 0xFF, SPEED_DIAL_REC_LEN);
+	memset(r, 0xFF, ONE_KEY_REC_LEN);
 	r[0] = flags;
 	r[1] = (uint8_t)id;
 	r[2] = (uint8_t)(id >> 8);
 	r[3] = (uint8_t)(id >> 16);
 	memcpy(&r[4], name, strlen(name));
+	r[20] = text;
 }
 
-static void test_speed_dial(void)
+#define TEXT_ACTION	(ONE_KEY_TEXT << 2)
+
+static void test_one_key(void)
 {
-	uint8_t r[SPEED_DIAL_REC_LEN + 4];
-	speed_dial_t s;
+	uint8_t r[ONE_KEY_REC_LEN + 4];
+	one_key_t k;
 	fresh();
-	CHECK(!speed_dial_get(4, &s));		// a blank area: every slot empty
-	speed_rec(r, SPEED_DIAL_GROUP, 4000, "Unlink");
-	CHECK(codeplug_kv_set(CODEPLUG_KEY_SPEED_DIAL + 4, r, SPEED_DIAL_REC_LEN));
-	CHECK(speed_dial_get(4, &s) && s.type == SPEED_DIAL_GROUP && s.id == 4000 && strcmp(s.name, "Unlink") == 0);
-	CHECK(!speed_dial_get(3, &s) && !speed_dial_get(5, &s));
-	CHECK(!speed_dial_get(SPEED_DIAL_SLOTS, &s));	// past the digits
+	CHECK(!one_key_get(4, &k));		// a blank area: every slot empty
+	key_rec(r, ONE_KEY_GROUP, 4000, "Unlink", 0xFF);
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_ONE_KEY + 4, r, ONE_KEY_REC_LEN));
+	CHECK(one_key_get(4, &k) && k.type == ONE_KEY_GROUP && k.action == ONE_KEY_CALL && k.id == 4000 &&
+	      strcmp(k.name, "Unlink") == 0 && k.text == 0);	// a call's quick text byte doesn't matter
+	CHECK(!one_key_get(3, &k) && !one_key_get(5, &k));
+	CHECK(!one_key_get(ONE_KEY_SLOTS, &k));	// past the digits
+	// a text: to a talkgroup or a person, quick text 0 to QUICK_TEXTS - 1
+	key_rec(r, TEXT_ACTION | ONE_KEY_GROUP, 91, "World", 3);
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.action == ONE_KEY_TEXT && k.text == 3 && k.id == 91);
+	key_rec(r, TEXT_ACTION | ONE_KEY_INDIVIDUAL, 9991234, "", QUICK_TEXTS - 1u);
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.type == ONE_KEY_INDIVIDUAL && k.text == QUICK_TEXTS - 1u);
+	key_rec(r, TEXT_ACTION | ONE_KEY_GROUP, 91, "", QUICK_TEXTS);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));	// no such quick text
+	key_rec(r, TEXT_ACTION | ONE_KEY_ALL, 0, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));	// a text has no all call
+	key_rec(r, (2u << 2) | ONE_KEY_GROUP, 91, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));	// actions 2 and 3: not yet
+	key_rec(r, (3u << 2) | ONE_KEY_GROUP, 91, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));
 	// a 16-character name has no terminator; a NUL-padded one ends at the NUL
-	speed_rec(r, SPEED_DIAL_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP");
-	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.type == SPEED_DIAL_INDIVIDUAL && s.id == 9991234 &&
-	      strcmp(s.name, "ABCDEFGHIJKLMNOP") == 0);
-	speed_rec(r, SPEED_DIAL_GROUP, 91, "");
+	key_rec(r, ONE_KEY_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP", 0);
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.type == ONE_KEY_INDIVIDUAL && k.id == 9991234 &&
+	      strcmp(k.name, "ABCDEFGHIJKLMNOP") == 0);
+	key_rec(r, ONE_KEY_GROUP, 91, "", 0);
 	memset(&r[4], 0, CODEPLUG_NAME_LEN);
-	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.name[0] == '\0');
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.name[0] == '\0');
 	// all call: the ID stored doesn't matter
-	speed_rec(r, SPEED_DIAL_ALL, 0, "");
-	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.type == SPEED_DIAL_ALL && s.id == 0xFFFFFFu);
+	key_rec(r, ONE_KEY_ALL, 0, "", 0);
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.type == ONE_KEY_ALL && k.id == 0xFFFFFFu);
 	// reserved flag bits and a longer (later) record: read from the front
-	speed_rec(r, 0xFC | SPEED_DIAL_GROUP, 3100, "USA");
-	r[SPEED_DIAL_REC_LEN] = 0x55;
-	CHECK(codeplug_kv_set(CODEPLUG_KEY_SPEED_DIAL + 0, r, SPEED_DIAL_REC_LEN + 4));
-	CHECK(speed_dial_get(0, &s) && s.type == SPEED_DIAL_GROUP && s.id == 3100 && strcmp(s.name, "USA") == 0);
-	// absent for the reader: too short, call type 3, ID 0, an ID past CODEPLUG_DMR_ID_MAX
-	speed_rec(r, SPEED_DIAL_GROUP, 91, "");
-	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN - 1, &s));
-	CHECK(!speed_dial_decode(r, -1, &s));
-	speed_rec(r, 3, 91, "");
-	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
-	speed_rec(r, SPEED_DIAL_INDIVIDUAL, 0, "");
-	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
-	speed_rec(r, SPEED_DIAL_GROUP, CODEPLUG_DMR_ID_MAX + 1u, "");
-	CHECK(!speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s));
-	speed_rec(r, SPEED_DIAL_GROUP, CODEPLUG_DMR_ID_MAX, "");
-	CHECK(speed_dial_decode(r, SPEED_DIAL_REC_LEN, &s) && s.id == CODEPLUG_DMR_ID_MAX);
+	key_rec(r, 0xF0 | ONE_KEY_GROUP, 3100, "USA", 0);
+	r[ONE_KEY_REC_LEN] = 0x55;
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_ONE_KEY + 0, r, ONE_KEY_REC_LEN + 4));
+	CHECK(one_key_get(0, &k) && k.type == ONE_KEY_GROUP && k.action == ONE_KEY_CALL && k.id == 3100 &&
+	      strcmp(k.name, "USA") == 0);
+	// absent for the reader: too short (the 20 bytes of the first draft too), call type 3, ID 0, an ID past
+	// CODEPLUG_DMR_ID_MAX
+	key_rec(r, ONE_KEY_GROUP, 91, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN - 1, &k));
+	CHECK(!one_key_decode(r, -1, &k));
+	key_rec(r, 3, 91, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));
+	key_rec(r, ONE_KEY_INDIVIDUAL, 0, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));
+	key_rec(r, ONE_KEY_GROUP, CODEPLUG_DMR_ID_MAX + 1u, "", 0);
+	CHECK(!one_key_decode(r, ONE_KEY_REC_LEN, &k));
+	key_rec(r, ONE_KEY_GROUP, CODEPLUG_DMR_ID_MAX, "", 0);
+	CHECK(one_key_decode(r, ONE_KEY_REC_LEN, &k) && k.id == CODEPLUG_DMR_ID_MAX);
 	// a slot removed is empty again
-	CHECK(codeplug_kv_remove(CODEPLUG_KEY_SPEED_DIAL + 4) && !speed_dial_get(4, &s));
+	CHECK(codeplug_kv_remove(CODEPLUG_KEY_ONE_KEY + 4) && !one_key_get(4, &k));
 }
 
-// The slot records come from the codeplug, written by any tool: mutated records (bit flips, magic bytes, cuts, longer
-// ones) never read past their length, and what reads as a slot holds what a slot can hold
-static void test_speed_dial_fuzz(void)
+// Quick texts (spec, "Quick texts"): ISO 8859-1 bytes up to the first 0x00 or 0xFF, at most QUICK_TEXT_MAX
+static void test_quick_text(void)
 {
-	uint8_t seeds[3][SPEED_DIAL_REC_LEN];
-	uint8_t buf[SPEED_DIAL_REC_LEN * 2];
-	speed_dial_t s;
+	char t[QUICK_TEXT_MAX + 8];
+	uint8_t v[QUICK_TEXT_MAX + 10];
+	fresh();
+	CHECK(!quick_text_get(0, t, sizeof t) && t[0] == '\0');
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_QUICK_TEXT + 1, "Going QRT now", 13));
+	CHECK(quick_text_get(1, t, sizeof t) && strcmp(t, "Going QRT now") == 0);
+	CHECK(!quick_text_get(0, t, sizeof t) && !quick_text_get(QUICK_TEXTS, t, sizeof t));
+	// Latin-1 kept as it is; a NUL or 0xFF ends the text
+	const uint8_t latin[] = { 'C', 'i', 'a', 'o', ' ', 0xE0, 0x00, 'x' };
+	CHECK(quick_text_decode(latin, (int)sizeof latin, t, sizeof t) && strlen(t) == 6 && (uint8_t)t[5] == 0xE0);
+	const uint8_t pad[] = { 'O', 'K', 0xFF, 0xFF };
+	CHECK(quick_text_decode(pad, (int)sizeof pad, t, sizeof t) && strcmp(t, "OK") == 0);
+	// empty: no bytes, or a 0x00 / 0xFF first
+	CHECK(!quick_text_decode(pad + 2, 2, t, sizeof t) && !quick_text_decode(latin, 0, t, sizeof t));
+	// longer than QUICK_TEXT_MAX: the first QUICK_TEXT_MAX; a small buffer: as much as fits
+	memset(v, 'a', sizeof v);
+	CHECK(codeplug_kv_set(CODEPLUG_KEY_QUICK_TEXT + 2, v, sizeof v));
+	CHECK(quick_text_get(2, t, sizeof t) && strlen(t) == QUICK_TEXT_MAX);
+	CHECK(quick_text_get(2, t, 5) && strcmp(t, "aaaa") == 0);
+	CHECK(!quick_text_decode(v, 4, t, 0));
+}
+
+// The slot and quick text values come from the codeplug, written by any tool: mutated values (bit flips, magic bytes,
+// cuts, longer ones) never read past their length, and what reads holds what a slot or a quick text can hold
+static void test_one_key_fuzz(void)
+{
+	uint8_t seeds[4][ONE_KEY_REC_LEN];
+	uint8_t buf[ONE_KEY_REC_LEN * 4];
+	char t[QUICK_TEXT_MAX + 1];
+	one_key_t k;
 	fuzz_t f;
-	speed_rec(seeds[0], SPEED_DIAL_GROUP, 4000, "Unlink");
-	speed_rec(seeds[1], SPEED_DIAL_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP");
-	speed_rec(seeds[2], SPEED_DIAL_ALL, 0xFFFFFFu, "");
+	key_rec(seeds[0], ONE_KEY_GROUP, 4000, "Unlink", 0);
+	key_rec(seeds[1], ONE_KEY_INDIVIDUAL, 9991234, "ABCDEFGHIJKLMNOP", 0);
+	key_rec(seeds[2], ONE_KEY_ALL, 0xFFFFFFu, "", 0);
+	key_rec(seeds[3], TEXT_ACTION | ONE_KEY_GROUP, 91, "World", 2);
 	fuzz_init(&f, 0x5D1A1);
 	for (long i = 0; i < fuzz_iters(20000); i++) {
-		memcpy(buf, seeds[i % 3], SPEED_DIAL_REC_LEN);
-		int n = fuzz_mutate(&f, buf, SPEED_DIAL_REC_LEN, (int)sizeof buf);
+		memcpy(buf, seeds[i % 4], ONE_KEY_REC_LEN);
+		int n = fuzz_mutate(&f, buf, ONE_KEY_REC_LEN, (int)sizeof buf);
 		uint8_t *p = fuzz_exact(buf, n);
-		memset(&s, 0xA5, sizeof s);
-		if (speed_dial_decode(p, n, &s)) {
-			CHECK(n >= (int)SPEED_DIAL_REC_LEN);
-			CHECK(s.type <= SPEED_DIAL_ALL);
-			CHECK(s.type == SPEED_DIAL_ALL ? s.id == 0xFFFFFFu : (s.id >= 1u && s.id <= CODEPLUG_DMR_ID_MAX));
-			CHECK(strlen(s.name) <= CODEPLUG_NAME_LEN);
-			for (const char *c = s.name; *c; c++) {
+		memset(&k, 0xA5, sizeof k);
+		if (one_key_decode(p, n, &k)) {
+			uint32_t id = p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16);
+			CHECK(n >= (int)ONE_KEY_REC_LEN);
+			CHECK(k.type <= ONE_KEY_ALL && k.action <= ONE_KEY_TEXT);
+			CHECK(k.type == ONE_KEY_ALL ? k.id == 0xFFFFFFu : (k.id == id && k.id >= 1u && k.id <= CODEPLUG_DMR_ID_MAX));
+			CHECK(k.action == ONE_KEY_CALL ? k.text == 0 : (k.text < QUICK_TEXTS && k.type != ONE_KEY_ALL));
+			CHECK(strlen(k.name) <= CODEPLUG_NAME_LEN);
+			for (const char *c = k.name; *c; c++) {
 				CHECK((uint8_t)*c != 0xFFu);
 			}
-		} else {
-			CHECK(n < (int)SPEED_DIAL_REC_LEN || (p[0] & 3u) == 3u ||
-			      ((p[0] & 3u) != SPEED_DIAL_ALL &&
-			       ((p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16)) == 0u ||
-				(p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16)) > CODEPLUG_DMR_ID_MAX)));
+		} else if (n >= (int)ONE_KEY_REC_LEN) {
+			uint8_t type = p[0] & 3u, action = (p[0] >> 2) & 3u;
+			uint32_t id = p[1] | (p[2] << 8) | ((uint32_t)p[3] << 16);
+			CHECK(type == 3u || action > ONE_KEY_TEXT || (type != ONE_KEY_ALL && (id == 0u || id > CODEPLUG_DMR_ID_MAX)) ||
+			      (action == ONE_KEY_TEXT && (type == ONE_KEY_ALL || p[20] >= QUICK_TEXTS)));
+		}
+		// the same bytes as a quick text
+		if (quick_text_decode(p, n, t, sizeof t)) {
+			CHECK(strlen(t) >= 1u && strlen(t) <= QUICK_TEXT_MAX && strlen(t) <= (size_t)n);
 		}
 		free(p);
 	}
@@ -694,8 +746,9 @@ int main(void)
 	test_head();
 	test_serial_commit();
 	test_power_cut();
-	test_speed_dial();
-	test_speed_dial_fuzz();
+	test_one_key();
+	test_quick_text();
+	test_one_key_fuzz();
 	sim_flash_free();
 	if (failures) {
 		printf("codeplugKvTest: %d failure(s)\n", failures);

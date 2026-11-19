@@ -360,24 +360,44 @@ msgid "Default: "
 msgstr "默认： "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_DMR_ONLY"
-msgid "Speed dial: on DMR channels"
-msgstr "缩位拨号：仅限 DMR 信道"
+msgctxt "ONEKEY_TOAST_DMR_ONLY"
+msgid "One key: on DMR channels"
+msgstr "一键操作：仅限 DMR 信道"
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_SPEED_DIAL"
-msgid "Speed dial "
-msgstr "缩位拨号 "
+msgctxt "ONEKEY_TOAST_KEY"
+msgid "One key "
+msgstr "一键操作 "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_IS_EMPTY_EDITOR"
+msgctxt "ONEKEY_TOAST_IS_EMPTY"
 msgid " is empty: set it in the Codeplug Editor"
 msgstr " 为空：请在 Codeplug Editor 中设置"
 
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
+msgid "Messages: not in this build"
+msgstr "消息：本版本无"
+
 #: core/ui/ui_app.c
-msgctxt "WHY_SPEED_DIAL_NOT_IN_BUILD"
-msgid "Speed dial: not in this build"
-msgstr "缩位拨号：本版本无"
+msgctxt "ONEKEY_TOAST_QUICK_TEXT"
+msgid "Quick text "
+msgstr "快捷消息 "
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "MSG_TOAST_SEND_FAILED"
+msgid "Couldn't send: try again"
+msgstr "发送失败：请重试"
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "TOAST_SENDING_TO"
+msgid "Sending to "
+msgstr "正在发送至 "
+
+#: core/ui/ui_app.c
+msgctxt "WHY_ONE_KEY_NOT_IN_BUILD"
+msgid "One key operation: not in this build"
+msgstr "一键操作：本版本无"
 
 #: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"
@@ -1545,11 +1565,6 @@ msgid "Poll short data"
 msgstr "请求数据"
 
 #: core/ui/ui_menus.c
-msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
-msgid "Messages: not in this build"
-msgstr "消息：本版本无"
-
-#: core/ui/ui_menus.c
 msgctxt "ACT_TOAST_CHECKING"
 msgid "Checking "
 msgstr "正在检查 "
@@ -1638,16 +1653,6 @@ msgstr "请求确认"
 msgctxt "MSG_LABEL_INCLUDE_POSITION"
 msgid "Include position"
 msgstr "APRS 位置"
-
-#: core/ui/ui_menus.c
-msgctxt "MSG_TOAST_SEND_FAILED"
-msgid "Couldn't send: try again"
-msgstr "发送失败：请重试"
-
-#: core/ui/ui_menus.c
-msgctxt "TOAST_SENDING_TO"
-msgid "Sending to "
-msgstr "正在发送至 "
 
 #: core/ui/ui_menus.c
 msgctxt "TEXT_TITLE_CALLSIGN"

@@ -17,7 +17,7 @@ import {
 import { parseTone } from "./fields.js";
 import { readHeader } from "./iddb.js";
 import { decodeArea, keyValid, recordValid, KEYS, RECORD_KEYS, ID_MAX } from "./kv.js";
-import { slotValid, SPEED_NAME_LEN } from "./speeddial.js";
+import { slotValid, quickTextValid, ONE_KEY_NAME_LEN, QUICK_TEXTS, QUICK_TEXT_MAX } from "./onekey.js";
 import { decodeModes, encodeModes, syncModes, removeModes, validateModes, MODE_LIMITS } from "./channelmodes.js";
 
 const REFS = ["contact", "rxList", "aprs"];
@@ -317,14 +317,25 @@ export function validate(m, { bands = null, features = null } = {}) {
 	}
 	// an area of a version the editor doesn't know reads as empty and is never written: a value set here is lost
 	if ((areaKeys.length || recKeys.length) && m.base && decodeArea(m.base.bytes).state === "newer") warn("general", null, (areaKeys[0] || recKeys[0]).name, "settings_area_newer");
-	// speed dial slots (speeddial.js): one the radio would read as empty is never written
-	(g.speedDial || []).forEach((s, n) => {
-		if (slotValid(s)) return;
-		if (s.name?.length > SPEED_NAME_LEN) err("general", null, "speedDial", "speed_dial_name", { n, max: SPEED_NAME_LEN });
-		else err("general", null, "speedDial", "speed_dial_id", { n, max: ID_MAX });
+	// one key operation slots and quick texts (onekey.js): one the radio would read as absent is never written. Quick
+	// texts are numbered from 1 on the page and on the radio
+	const texts = g.quickTexts || [];
+	(g.oneKey || []).forEach((s, n) => {
+		if (!slotValid(s)) {
+			if (s.name?.length > ONE_KEY_NAME_LEN) err("general", null, "oneKey", "one_key_name", { n, max: ONE_KEY_NAME_LEN });
+			else if (s.action === "text" && s.type === "all") err("general", null, "oneKey", "one_key_text_all", { n });
+			else if (s.action === "text" && !(Number.isInteger(s.text) && s.text >= 0 && s.text < QUICK_TEXTS)) err("general", null, "oneKey", "one_key_no_text", { n });
+			else err("general", null, "oneKey", "one_key_id", { n, max: ID_MAX });
+		} else if (s?.action === "text" && texts[s.text] == null) {
+			warn("general", null, "oneKey", "one_key_text_empty", { n, text: s.text + 1 });
+		}
 	});
-	if ((g.speedDial || []).some((s) => s) && !areaKeys.length && !recKeys.length && m.base && decodeArea(m.base.bytes).state === "newer")
-		warn("general", null, "speedDial", "speed_dial_area_newer");
+	texts.forEach((t, i) => {
+		if (!quickTextValid(t)) err("general", null, "quickTexts", "quick_text_chars", { n: i + 1, max: QUICK_TEXT_MAX });
+	});
+	if (((g.oneKey || []).some((s) => s) || texts.some((t) => t != null)) && !areaKeys.length && !recKeys.length && m.base &&
+	    decodeArea(m.base.bytes).state === "newer")
+		warn("general", null, "oneKey", "one_key_area_newer");
 
 	const counts = [["channels", LIMITS.channels], ["contacts", LIMITS.contacts], ["rxLists", LIMITS.rxLists],
 		["zones", LIMITS.zones], ["dtmfContacts", LIMITS.dtmfContacts], ["aprs", LIMITS.aprs]];

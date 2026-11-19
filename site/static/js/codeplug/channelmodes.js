@@ -16,6 +16,7 @@
 // m.modeSettings: {kind id: the module's fields}.
 
 import { decodeArea, getValue, setValue, deleteValue, dedupe, putArea, KV_ADDR, KV_SIZE, KV_HDR, KEYS } from "./kv.js";
+import { oneKeyEntries } from "./onekey.js";
 import { getName, putName } from "./fields.js";
 import { KINDS, kindRow, typeRow, radioRuns } from "./modes.js";
 import { u16, u32, put16, put32, sameBytes, sameValue, nameCheck } from "./modebytes.js";
@@ -367,6 +368,7 @@ export function modeAreaUse(m, b, baseNames) {
 	const entries = area.state === "valid" ? dedupe(area.entries) : [];
 	let out = modeEntries(m, entries, baseNames);
 	for (const row of KEYS) if (m.general?.[row.name] != null && !getValue(out, row.key)) out = [...out, { key: row.key, value: new Uint8Array(row.size) }];
+	out = oneKeyEntries(out, m.general?.oneKey, m.general?.quickTexts);
 	const hdr = area.state === "valid" ? b[KV_ADDR + 5] : KV_HDR;
 	return { used: out.reduce((n, e) => n + 4 + e.value.length, 0), max: KV_SIZE - hdr };
 }
@@ -443,11 +445,13 @@ export function validateModes(m, err, warn, { features = null, baseNames } = {})
 	if (!m.base) return;
 	const state = decodeArea(m.base.bytes).state;
 	const any = systems.length || m.channels.some((c) => c.kind);
+	// the one key operation slots and quick texts share the area (onekey.js): they count towards its room too
+	const oneKey = m.general?.oneKey?.some((s) => s) || m.general?.quickTexts?.some((t) => t != null);
 	if (state === "newer") {
 		if (any) warn(S, null, null, "mode_area_newer");
 		return;
 	}
-	if (!any) return;
+	if (!any && !oneKey) return;
 	const { used, max } = modeAreaUse(m, m.base.bytes, baseNames);
 	if (used > max) err(S, null, null, "settings_area_full", { used, max });
 }

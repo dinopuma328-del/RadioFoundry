@@ -10,7 +10,7 @@ import {
 	getFreq, putFreq, getBcdId, putBcdId, getTone, putTone, getName, putName, getCoord, coordBytes, u16, put16,
 } from "./fields.js";
 import { decodeArea, getKey, getRecord, sameRecord, recordValid, putKeys, keyValid, KEYS, RECORD_KEYS } from "./kv.js";
-import { decodeSpeedDial, putSpeedDial } from "./speeddial.js";
+import { decodeOneKey, decodeQuickTexts, putOneKey } from "./onekey.js";
 
 export const LIMITS = {
 	channels: 1024, zones: 68, zoneChannels: 80, contacts: 1024, rxLists: 76, rxListContacts: 32,
@@ -314,8 +314,8 @@ export function encodeAprs(a, r) {
 // --- General settings, boot text (7.3.2, 7.2), the settings area's keys (codeplug-settings.md) ---
 
 // The settings area's keys (kv.js KEYS; arsServer, ipGateway: DMR IDs, 0 = off; the Settings > Sound tones: true on,
-// false off) are fields too: null when the key is absent (the radio keeps its own setting). speedDial: the ten slots
-// (speeddial.js), null for an empty one
+// false off) are fields too: null when the key is absent (the radio keeps its own setting). oneKey: the ten one key
+// operation slots, quickTexts the sixteen quick texts (onekey.js), null for an empty one
 export function decodeGeneral(b) {
 	const g = b.subarray(GENERAL, GENERAL + GENERAL_SIZE);
 	const kv = decodeArea(b).entries;
@@ -328,7 +328,8 @@ export function decodeGeneral(b) {
 		bootLine2: getName(b, BOOT_TEXT + 16, 16),
 		...Object.fromEntries(KEYS.map((row) => [row.name, getKey(kv, row)])),
 		...Object.fromEntries(RECORD_KEYS.map((row) => [row.name, getRecord(kv, row)])),
-		speedDial: decodeSpeedDial(kv),
+		oneKey: decodeOneKey(kv),
+		quickTexts: decodeQuickTexts(kv),
 	};
 }
 
@@ -356,6 +357,6 @@ export function encodeGeneral(s, b) {
 		if (!sameRecord(was[row.name], v) && (v === null || recordValid(row, v))) vals[row.name] = v;
 	}
 	if (Object.keys(vals).length) putKeys(b, vals);
-	// speed dial slots: only those that changed (speeddial.js); never over a newer area
-	if (s.speedDial) putSpeedDial(b, s.speedDial);
+	// one key operation slots and quick texts: only those that changed (onekey.js); never over a newer area
+	if (s.oneKey || s.quickTexts) putOneKey(b, s.oneKey, s.quickTexts);
 }

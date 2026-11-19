@@ -232,11 +232,11 @@
 #ifndef CONFIG_CONTACT_EDIT
 #define CONFIG_CONTACT_EDIT		(CONFIG_CHANNEL_EDIT && CONFIG_DMR)
 #endif
-#ifndef CONFIG_SPEED_DIAL
-#define CONFIG_SPEED_DIAL		CONFIG_DMR
+#ifndef CONFIG_ONE_KEY
+#define CONFIG_ONE_KEY			CONFIG_DMR
 #endif
-#if CONFIG_SPEED_DIAL && !CONFIG_DMR
-#error "CONFIG_SPEED_DIAL needs CONFIG_DMR"
+#if CONFIG_ONE_KEY && !CONFIG_DMR
+#error "CONFIG_ONE_KEY needs CONFIG_DMR"
 #endif
 // Zone writes that move zone indexes (core/codeplug/zone_edit.h): the zone editor's, and zone sharing's import of a
 // new zone. Whoever keeps a zone index (the radio core, dual watch, the open zone screens) follows them

@@ -392,7 +392,7 @@ The same on every screen (information-architecture.md, key maps 7.1 to 7.5):
 | QUICK | Quick settings (closes them again) | lock / unlock the keys |
 | CONTEXT | the focused item's actions; a banner's target while one is up | Recent |
 | TALK_TARGET | the talk target picker | |
-| digits | Find on Home, numbered rows in lists, T9 letters in filters; nothing while PTT keys the radio; on FM the input task gives them, \* and # to the radio core as DTMF and the UI never sees them (`radio-features.md` 3.7) | on Home on a DMR channel, speed dial: the slot's target becomes the temporary talk target ([codeplug-settings.md](codeplug-settings.md) 3.4), an empty slot or another mode a toast; in the VFO, the digit; nothing while PTT keys the radio |
+| digits | Find on Home, numbered rows in lists, T9 letters in filters; nothing while PTT keys the radio; on FM the input task gives them, \* and # to the radio core as DTMF and the UI never sees them (`radio-features.md` 3.7) | on Home on a DMR channel, one key operation ([codeplug-settings.md](codeplug-settings.md) 3.4): a call slot makes its target the temporary talk target, a text slot sends its quick text to its target ("Sending to ..."); an empty slot, an empty quick text or another mode a toast; in the VFO, the digit; nothing while PTT keys the radio |
 | PTT | talk to the focused person or talkgroup once (one-shot), else the channel's target | |
 
 Radios without some keys fall back as the key maps say (few-key map F in the tests). Up / Down on Home change the
@@ -707,7 +707,7 @@ HIL: `tests/hil/test_ui.py` (`tests/hil/README.md`) replays the main sequences o
   between steps is refused with the range. Only key slot 1 is reachable from the menu.
 - Switching USB to network has no confirmation (P7: reversible); the info page says what stops and how to get back.
 - A failed message isn't kept for a retry: the banner says "Not delivered: send it again".
-- Compose offers canned texts only ("OK", "On my way", "Call me", "Can't talk now"), sent in the language in use (2.5); free text is dimmed.
+- Compose offers canned texts only ("OK", "On my way", "Call me", "Can't talk now"), sent in the language in use (2.5); free text is dimmed. The codeplug's quick texts follow them, as written, with one key operation and text messages in the build ([codeplug-settings.md](codeplug-settings.md) 3.5).
 - Deleting a message has no undo (`sms_inbox_delete` removes it from the RAM inbox).
 - Save to channel and the permanent talk target write the codeplug as a storage job on the housekeeping task, so the
   UI no longer stalls for the flash write. A permanent target must be a stored contact: a typed ID is set for now at

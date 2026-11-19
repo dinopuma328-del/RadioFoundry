@@ -358,24 +358,44 @@ msgid "Default: "
 msgstr "Par défaut : "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_DMR_ONLY"
-msgid "Speed dial: on DMR channels"
-msgstr "Appel abrégé : canaux DMR seuls"
+msgctxt "ONEKEY_TOAST_DMR_ONLY"
+msgid "One key: on DMR channels"
+msgstr "Touche rapide : canaux DMR seuls"
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_SPEED_DIAL"
-msgid "Speed dial "
-msgstr "Appel abrégé "
+msgctxt "ONEKEY_TOAST_KEY"
+msgid "One key "
+msgstr "Touche rapide "
 
 #: core/ui/ui_app.c
-msgctxt "DIAL_TOAST_IS_EMPTY_EDITOR"
+msgctxt "ONEKEY_TOAST_IS_EMPTY"
 msgid " is empty: set it in the Codeplug Editor"
-msgstr " est vide : à régler dans le Codeplug Editor"
+msgstr " vide : à régler dans le Codeplug Editor"
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
+msgid "Messages: not in this build"
+msgstr "Messages indispo."
 
 #: core/ui/ui_app.c
-msgctxt "WHY_SPEED_DIAL_NOT_IN_BUILD"
-msgid "Speed dial: not in this build"
-msgstr "Appel abrégé indispo."
+msgctxt "ONEKEY_TOAST_QUICK_TEXT"
+msgid "Quick text "
+msgstr "Texte rapide "
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "MSG_TOAST_SEND_FAILED"
+msgid "Couldn't send: try again"
+msgstr "Erreur d'envoi"
+
+#: core/ui/ui_app.c core/ui/ui_menus.c
+msgctxt "TOAST_SENDING_TO"
+msgid "Sending to "
+msgstr "Envoi à "
+
+#: core/ui/ui_app.c
+msgctxt "WHY_ONE_KEY_NOT_IN_BUILD"
+msgid "One key operation: not in this build"
+msgstr "Touche rapide indispo."
 
 #: core/ui/ui_app.c
 msgctxt "HOME_TOAST_REPLY_ENDED"
@@ -1543,11 +1563,6 @@ msgid "Poll short data"
 msgstr "Demander données courtes"
 
 #: core/ui/ui_menus.c
-msgctxt "WHY_MESSAGES_NOT_IN_BUILD"
-msgid "Messages: not in this build"
-msgstr "Messages indispo."
-
-#: core/ui/ui_menus.c
 msgctxt "ACT_TOAST_CHECKING"
 msgid "Checking "
 msgstr "Vérification de "
@@ -1636,16 +1651,6 @@ msgstr "Demander un accusé"
 msgctxt "MSG_LABEL_INCLUDE_POSITION"
 msgid "Include position"
 msgstr "Position APRS"
-
-#: core/ui/ui_menus.c
-msgctxt "MSG_TOAST_SEND_FAILED"
-msgid "Couldn't send: try again"
-msgstr "Erreur d'envoi"
-
-#: core/ui/ui_menus.c
-msgctxt "TOAST_SENDING_TO"
-msgid "Sending to "
-msgstr "Envoi à "
 
 #: core/ui/ui_menus.c
 msgctxt "TEXT_TITLE_CALLSIGN"

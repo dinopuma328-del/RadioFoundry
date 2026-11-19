@@ -1408,8 +1408,8 @@ run-cpedit: codeplugEditTest
 # The codeplug settings area: keyed values, unknown keys kept, invalid and newer areas, power cuts during a write
 TESTS   += codeplugKvTest
 
-codeplugKvTest: codeplugKvTest.c $(CPEDIT) $(CORE)/codeplug/speed_dial.c $(wildcard $(CORE)/codeplug/*.h $(CORE)/storage/*.h sim/sim_flash.h)
-	$(CC) $(CFLAGS) -I$(ROOT)/hal -I. -Wshadow -o $@ codeplugKvTest.c $(CPEDIT) $(CORE)/codeplug/speed_dial.c
+codeplugKvTest: codeplugKvTest.c $(CPEDIT) $(CORE)/codeplug/one_key.c $(wildcard $(CORE)/codeplug/*.h $(CORE)/storage/*.h sim/sim_flash.h)
+	$(CC) $(CFLAGS) -I$(ROOT)/hal -I. -Wshadow -o $@ codeplugKvTest.c $(CPEDIT) $(CORE)/codeplug/one_key.c
 
 run: run-cpkv
 run-cpkv: codeplugKvTest

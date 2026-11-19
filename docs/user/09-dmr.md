@@ -96,18 +96,28 @@ picker's. **Up** from the top goes to the last contact.
 
 On an FM channel **Talk target** shows "Talk target: DMR channels only".
 
-### Speed dial
+### One key operation
 
-Hold a digit, **0** to **9**, on Home on a DMR channel. The slot's talkgroup or person becomes the talk target for now
-and the radio shows "Talking to ...". Press **PTT** to call it. Nothing is sent before that. **Back** on Home goes back
-to the channel's default.
+Hold a digit, **0** to **9**, on Home on a DMR channel. What happens depends on how the slot is set in the
+[Codeplug Editor](04-programming.md#one-key-operation):
 
-Set the slots in the [Codeplug Editor](04-programming.md#speed-dial), **Radio** tab. A slot holds the talkgroup or ID
-itself, so it doesn't have to be a contact. An empty slot shows "Speed dial 2 is empty: set it in the Codeplug
-Editor". On an FM channel the radio shows "Speed dial: on DMR channels". In the VFO a held digit types the digit.
+| Slot | Holding the digit |
+|---|---|
+| Call | The slot's talkgroup or person becomes the talk target for now, and the radio shows "Talking to ...". Press **PTT** to call it. Nothing is sent before that. **Back** on Home goes back to the channel's default |
+| Text | The slot's quick text goes at once to its talkgroup or person, and the radio shows "Sending to ...". It goes in the message format set in the radio, like a message from the composer ([Messages](10-messages-and-signaling.md)) |
 
-A slot to a "disconnect" talkgroup (4000 on many networks) unlinks a repeater in two key presses: hold the digit,
-then a short **PTT**.
+A slot holds the talkgroup or ID itself, so it doesn't have to be a contact.
+
+| The radio shows | Why |
+|---|---|
+| "One key 2 is empty: set it in the Codeplug Editor" | slot 2 isn't set |
+| "Quick text 3 is empty: set it in the Codeplug Editor" | a text slot uses quick text 3, which has no text |
+| "One key: on DMR channels" | the channel is FM, or another mode |
+
+In the VFO a held digit types the digit.
+
+A call slot to a "disconnect" talkgroup (4000 on many networks) unlinks a repeater in two key presses: hold the
+digit, then a short **PTT**.
 
 ### Typing a talkgroup or ID
 

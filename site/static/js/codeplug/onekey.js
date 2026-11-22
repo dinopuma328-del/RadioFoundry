@@ -57,21 +57,22 @@ export function slotValid(s) {
 	return s.type === "all" || (Number.isInteger(s.id) && s.id >= 1 && s.id <= ID_MAX);
 }
 
-// A quick text's text from its value: the bytes up to the first 0x00 or 0xFF, at most QUICK_TEXT_MAX; null for none
+// A quick text's text from its value as the radio reads it: the bytes up to the first 0x00 or 0xFF, at most
+// QUICK_TEXT_MAX, without the C0 and C1 controls and DEL; null for none
 export function decodeQuickText(v) {
 	if (!v) return null;
-	const s = getName(v, 0, Math.min(v.length, QUICK_TEXT_MAX));
+	const s = getName(v, 0, Math.min(v.length, QUICK_TEXT_MAX)).replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
 	return s.length ? s : null;
 }
 
 // Whether t is a quick text the radio reads as written: null (none), or 1 to QUICK_TEXT_MAX ISO 8859-1 characters
-// other than U+0000 and U+00FF (they end a text)
+// with no C0 or C1 control or DEL (the radio drops them, as from a received text) and no U+00FF (it ends a text)
 export function quickTextValid(t) {
 	if (t == null) return true;
 	if (typeof t !== "string" || t.length < 1 || t.length > QUICK_TEXT_MAX) return false;
 	for (let i = 0; i < t.length; i++) {
 		const c = t.charCodeAt(i);
-		if (c === 0 || c >= 0xFF) return false;
+		if (c < 0x20 || (c >= 0x7F && c <= 0x9F) || c >= 0xFF) return false;
 	}
 	return true;
 }

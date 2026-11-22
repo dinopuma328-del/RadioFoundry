@@ -239,8 +239,9 @@ Preset text messages: quick text n is key 0x1F00 + n, n 0-15. The value is the t
 character, at most 64 bytes, with no terminator. A one key operation slot sends one (3.4), and the message composer
 lists them after its own presets ([ui.md](ui.md) 8).
 
-- The text ends at the first 0x00 or 0xFF, and a reader takes at most the first 64 bytes. A quick text with no
-  character before that is absent.
+- The text ends at the first 0x00 or 0xFF, and a reader takes at most the first 64 bytes. It drops the C0 and C1
+  controls and DEL (0x01-0x1F, 0x7F-0x9F), as from a received text ([dmr-data.md](dmr-data.md)), and a writer doesn't
+  write them. A quick text with no character left is absent.
 - 16 texts of 64 bytes take about 1 KB of the 4 KB area (2): the limits keep room for the other keys.
 - The radio and the Codeplug Editor show quick text n as number n + 1 ("Quick text 3" is key 0x1F02).
 - The radio only reads them (`quick_text_get`, `core/codeplug/one_key.c`, `CONFIG_ONE_KEY` with `CONFIG_DMR_SMS`).

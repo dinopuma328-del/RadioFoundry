@@ -39,7 +39,8 @@ bool one_key_decode(const uint8_t *v, int n, one_key_t *out);
 bool one_key_get(uint8_t n, one_key_t *out);
 
 // Quick text n's text from its value (v, n bytes as stored) into out (cap bytes, NUL terminated): the bytes up to the
-// first 0x00 or 0xFF, at most QUICK_TEXT_MAX. False when that leaves no text
+// first 0x00 or 0xFF, at most QUICK_TEXT_MAX of them, without the C0 and C1 controls and DEL. False when that leaves
+// no text
 bool quick_text_decode(const uint8_t *v, int len, char *out, size_t cap);
 
 // Quick text n from the codeplug settings area (CONFIG_ONE_KEY and CONFIG_DMR_SMS). False when it is absent or empty

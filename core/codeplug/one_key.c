@@ -55,16 +55,23 @@ bool one_key_get(uint8_t n, one_key_t *out)
 
 bool quick_text_decode(const uint8_t *v, int len, char *out, size_t cap)
 {
-	size_t i = 0;
+	size_t o = 0;
 	if (cap == 0u) {
 		return false;
 	}
-	while (len > 0 && i < (size_t)len && i < QUICK_TEXT_MAX && i + 1u < cap && v[i] != 0u && v[i] != 0xFFu) {
-		out[i] = (char)v[i];
-		i++;
+	for (size_t i = 0; len > 0 && i < (size_t)len && i < QUICK_TEXT_MAX && v[i] != 0u && v[i] != 0xFFu; i++) {
+		// the C0 and C1 controls and DEL are dropped, as from a received text (dmr-data.md): the UI draws its own
+		// glyphs at 0x80-0x86
+		if (v[i] < 0x20u || (v[i] >= 0x7Fu && v[i] <= 0x9Fu)) {
+			continue;
+		}
+		if (o + 1u >= cap) {
+			break;
+		}
+		out[o++] = (char)v[i];
 	}
-	out[i] = '\0';
-	return i > 0u;
+	out[o] = '\0';
+	return o > 0u;
 }
 
 bool quick_text_get(uint8_t n, char *out, size_t cap)

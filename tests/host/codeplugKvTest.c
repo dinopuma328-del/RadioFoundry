@@ -676,6 +676,11 @@ static void test_quick_text(void)
 	CHECK(quick_text_decode(latin, (int)sizeof latin, t, sizeof t) && strlen(t) == 6 && (uint8_t)t[5] == 0xE0);
 	const uint8_t pad[] = { 'O', 'K', 0xFF, 0xFF };
 	CHECK(quick_text_decode(pad, (int)sizeof pad, t, sizeof t) && strcmp(t, "OK") == 0);
+	// the C0 and C1 controls and DEL are dropped, as from a received text; only controls is no text
+	const uint8_t ctl[] = { 'A', 0x07, 'B', 0x7F, 0x82, 'C', 0x9F, 0xA0 };
+	CHECK(quick_text_decode(ctl, (int)sizeof ctl, t, sizeof t) && strcmp(t, "ABC\xA0") == 0);
+	const uint8_t only_ctl[] = { 0x01, 0x85, 0x1F };
+	CHECK(!quick_text_decode(only_ctl, (int)sizeof only_ctl, t, sizeof t) && t[0] == '\0');
 	// empty: no bytes, or a 0x00 / 0xFF first
 	CHECK(!quick_text_decode(pad + 2, 2, t, sizeof t) && !quick_text_decode(latin, 0, t, sizeof t));
 	// longer than QUICK_TEXT_MAX: the first QUICK_TEXT_MAX; a small buffer: as much as fits
@@ -724,6 +729,10 @@ static void test_one_key_fuzz(void)
 		// the same bytes as a quick text
 		if (quick_text_decode(p, n, t, sizeof t)) {
 			CHECK(strlen(t) >= 1u && strlen(t) <= QUICK_TEXT_MAX && strlen(t) <= (size_t)n);
+			for (const char *c = t; *c; c++) {
+				uint8_t u = (uint8_t)*c;
+				CHECK(u >= 0x20u && !(u >= 0x7Fu && u <= 0x9Fu) && u != 0xFFu);
+			}
 		}
 		free(p);
 	}

@@ -96,6 +96,12 @@ test("quick texts: the bytes, what reads as none, what is valid", () => {
 	assert.ok(!quickTextValid("€ 5"));	// outside ISO 8859-1
 	assert.ok(!quickTextValid("ÿ"));	// U+00FF ends a text
 	assert.ok(!quickTextValid("a\u0000b"));
+	assert.ok(!quickTextValid("line\none"));	// C0 control
+	assert.ok(!quickTextValid("a\u0082b"));	// C1 control: the radio draws its own glyphs there
+	assert.ok(!quickTextValid("a\u007Fb"));	// DEL
+	// read as the radio reads it: the controls dropped
+	assert.equal(decodeQuickText(Uint8Array.from([0x41, 0x07, 0x42, 0x7F, 0x82, 0x43, 0xA0])), "ABC\u00A0");
+	assert.equal(decodeQuickText(Uint8Array.from([0x01, 0x85])), null);
 });
 
 test("one key: decoded from the area, ten slots and sixteen texts, the rest of the families ignored", () => {

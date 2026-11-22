@@ -299,6 +299,24 @@ with the tone debounce (8 polls) that keeps fades from chopping audio.
 The noise squelch shortens the tail itself. It closes after `RADIO_SQL_CLOSE_POLLS` (2) polls over the close line
 (open threshold + `RADIO_SQL_HYST_DB`), 50 ms, but after one poll when the noise is `RADIO_SQL_FAST_CLOSE_DB` (12 dB)
 or more over it: a carrier that goes takes the noise far over the line at once, while a fade crosses it by a little.
+A voice peak doesn't close the squelch. On a 12.5 kHz channel, speech above about 2 kHz (fricatives such as S, SH
+and T) raises some receivers' noise reading over the close line for 100-300 ms, past the fast close line from a sender
+that deviates wide, while the carrier stays as strong as it was. On a 12.5 kHz channel, noise over the line with the
+RX tone still heard and the signal strength within `RADIO_SQL_PEAK_RSSI_DB` (3 dB) of the last poll that held the
+squelch open closes only after `RADIO_SQL_PEAK_POLLS` (16) polls, 400 ms: the longest sibilant plus 100 ms. A carrier
+that goes takes the strength down with the noise up: one poll past the fast close line, two otherwise. If the strength
+reading lags the noise reading by a poll, the second poll sees the drop and closes on schedule. A lost RX tone closes
+as before. Wider channels never hold.
+
+The hold needs a carrier `RADIO_SQL_PEAK_FLOOR_DB` (10 dB) over the receiver's floor, so that a weak carrier's drop
+always moves the strength by more than 3 dB. The core learns the floor from idle polls with the noise over the level
+1 close line: the floor follows a lower reading at once and rises 1 dB every `RADIO_SQL_FLOOR_RISE_POLLS` (4) polls.
+Until the first idle poll there is no floor and no hold. A weaker carrier closes on voice peaks as before.
+
+The core view's `sql_close` gives the number of polls over the line at the last close: 1 or 2 for a carrier that went,
+16 for a hold that ran out. Widening the receive filter also lowered the reading on voice, but raised the reading on
+weak signals by up to 8 dB, so the squelch would open later on a weak station.
+
 Squelch level 0 (always open) and the APRS hold (`RADIO_SQL_CLOSE_POLLS_APRS`) keep their own timing. On one board
 (BK4819 receiver) the tail at the speaker went from 55 ms to 15-35 ms in three calls (measured,
 `test_fm_rx_speaker`); what is left is the poll and the chip's noise reading lag.
@@ -575,7 +593,10 @@ silence and not the tone. The guard counts in the tone's length for the tail hol
 three superframes (1080 ms) the over is held for.
 
 On the speaker the start tone follows the board: a board with `CAP_BEEP_NOT_ON_AIR` plays a DMR start tone before keying,
-in the talk permit's hold (`permit_before_key`), and plays the FM start tone on the speaker as it keys (only the DMR engine closes the audio path). A board with `hal_radio_t.tx_tone_side` (the modem's sidetone) hears an FM start tone set to speaker + air from the tone sent on air: the core turns the sidetone on with the tone and off when it ends, and plays no separate beep. The end
+in the talk permit's hold (`permit_before_key`). It plays the FM start tone on the speaker before keying too
+(`fm_start_before_key`): such a board can't play the speaker while it transmits FM (it gates the codec's speaker PCM
+because the ring playback mixes into the modulator, or it switches the speaker amplifier off), so the radio still receives while the tone plays, for at most `FM_PREKEY_MAX_MS` (1200 ms), and the
+carrier follows (a PTT let go meanwhile never keys, and the channel is checked again before it does). A board with `hal_radio_t.tx_tone_side` (the modem's sidetone) hears an FM start tone set to speaker + air from the tone sent on air: the core turns the sidetone on with the tone and off when it ends, and plays no separate beep. The end
 tone plays once the transmitter is off, and on a board whose audio path is closed while the DMR engine sends its last burst
 (`hal_audio_t.speaker_blocked`) a little after that: audio queued while the path is closed is dropped when it opens, so the
 core waits for it, at most `DMR_END_WAIT_MS` (400 ms), and then plays it whole.

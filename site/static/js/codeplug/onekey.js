@@ -7,7 +7,7 @@
 // them; the editor writes a slot's record from the front and keeps a later version's bytes.
 
 import { decodeArea, getValue, setValue, deleteValue, dedupe, putArea, ID_MAX } from "./kv.js";
-import { getName, putName } from "./fields.js";
+import { getName, putName, nameBytes } from "./fields.js";
 
 export const ONE_KEY_KEY = 0x1E00;
 export const ONE_KEY_SLOTS = 10;	// digits 0-9
@@ -48,20 +48,27 @@ export function encodeSlot(s, old = null) {
 }
 
 // Whether s is a slot the radio reads as written: null (empty), or a known action and type with an ID in range, a
-// short name and, for a text, a quick text number for a person or a talkgroup
+// name of at most 16 bytes as a channel's (fields.js nameBytes) and, for a text, a quick text number for a person or a talkgroup
 export function slotValid(s) {
 	if (s == null) return true;
 	if (!ONE_KEY_ACTIONS.includes(s.action) || !ONE_KEY_TYPES.includes(s.type)) return false;
-	if (typeof s.name !== "string" || s.name.length > ONE_KEY_NAME_LEN) return false;
+	if (typeof s.name !== "string" || nameBytes(s.name) > ONE_KEY_NAME_LEN) return false;	// bytes: Chinese takes three
 	if (s.action === "text" && (s.type === "all" || !Number.isInteger(s.text) || s.text < 0 || s.text >= QUICK_TEXTS)) return false;
 	return s.type === "all" || (Number.isInteger(s.id) && s.id >= 1 && s.id <= ID_MAX);
 }
 
-// A quick text's text from its value as the radio reads it: the bytes up to the first 0x00 or 0xFF, at most
-// QUICK_TEXT_MAX, without the C0 and C1 controls and DEL; null for none
+// A quick text's text from its value as the radio reads it: ISO 8859-1, one byte a character, up to the first 0x00 or
+// 0xFF, at most QUICK_TEXT_MAX bytes, without the C0 and C1 controls and DEL; null for none. Not getName: a name also
+// holds the radio's glyph bytes and UTF-8, a quick text doesn't
 export function decodeQuickText(v) {
 	if (!v) return null;
-	const s = getName(v, 0, Math.min(v.length, QUICK_TEXT_MAX)).replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+	let s = "";
+	for (let i = 0; i < Math.min(v.length, QUICK_TEXT_MAX); i++) {
+		const c = v[i];
+		if (c === 0x00 || c === 0xFF) break;
+		if (c < 0x20 || (c >= 0x7F && c <= 0x9F)) continue;
+		s += String.fromCharCode(c);
+	}
 	return s.length ? s : null;
 }
 
@@ -77,10 +84,9 @@ export function quickTextValid(t) {
 	return true;
 }
 
+// The bytes of a valid quick text (quickTextValid): each character's ISO 8859-1 byte
 export function encodeQuickText(t) {
-	const b = new Uint8Array(t.length);
-	putName(b, 0, t.length, t);
-	return b;
+	return Uint8Array.from(t, (c) => c.charCodeAt(0));
 }
 
 const sameSlot = (a, b) => a === b || (a != null && b != null && a.action === b.action && a.type === b.type &&

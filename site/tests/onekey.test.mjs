@@ -73,6 +73,8 @@ test("one key: which slots are valid", () => {
 	assert.ok(!slotValid(call("group", 0)));
 	assert.ok(!slotValid(call("private", ID_MAX + 1)));
 	assert.ok(!slotValid(call("group", 91, "x".repeat(17))));
+	assert.ok(slotValid(call("group", 91, "中文名字")));	// 12 bytes as UTF-8, as a channel name
+	assert.ok(!slotValid(call("group", 91, "中文名字中文")));	// 18 bytes
 	assert.ok(!slotValid({ ...call("group", 91), type: "other" }));
 	assert.ok(!slotValid({ ...call("group", 91), action: "dtmf" }));
 	assert.ok(!slotValid(text("all", 0, 0)));
@@ -102,6 +104,8 @@ test("quick texts: the bytes, what reads as none, what is valid", () => {
 	// read as the radio reads it: the controls dropped
 	assert.equal(decodeQuickText(Uint8Array.from([0x41, 0x07, 0x42, 0x7F, 0x82, 0x43, 0xA0])), "ABC\u00A0");
 	assert.equal(decodeQuickText(Uint8Array.from([0x01, 0x85])), null);
+	// one byte a character: no UTF-8 as in a name (0xE4 0xB8 0xAD would be one Chinese character there)
+	assert.equal(decodeQuickText(Uint8Array.from([0xE4, 0xB8, 0xAD])), "\u00E4\u00B8\u00AD");
 });
 
 test("one key: decoded from the area, ten slots and sixteen texts, the rest of the families ignored", () => {

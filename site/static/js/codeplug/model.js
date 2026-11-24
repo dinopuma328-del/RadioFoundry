@@ -334,7 +334,7 @@ export function validate(m, { bands = null, features = null } = {}) {
 	const texts = g.quickTexts || [];
 	(g.oneKey || []).forEach((s, n) => {
 		if (!slotValid(s)) {
-			if (s.name?.length > ONE_KEY_NAME_LEN) err("general", null, "oneKey", "one_key_name", { n, max: ONE_KEY_NAME_LEN });
+			if (typeof s.name === "string" && nameBytes(s.name) > ONE_KEY_NAME_LEN) err("general", null, "oneKey", "one_key_name", { n, max: ONE_KEY_NAME_LEN });
 			else if (s.action === "text" && s.type === "all") err("general", null, "oneKey", "one_key_text_all", { n });
 			else if (s.action === "text" && !(Number.isInteger(s.text) && s.text >= 0 && s.text < QUICK_TEXTS)) err("general", null, "oneKey", "one_key_no_text", { n });
 			else err("general", null, "oneKey", "one_key_id", { n, max: ID_MAX });

@@ -604,7 +604,7 @@ function oneKeyPart() {
 			err.textContent = "";
 			set(n, { ...s, id: v });
 		});
-		name.addEventListener("change", () => set(n, { ...s, name: name.value.slice(0, ONE_KEY_NAME_LEN) }));
+		name.addEventListener("change", () => set(n, { ...s, name: name.value }));	// too long for 16 bytes: a Problems error
 		text.addEventListener("change", () => set(n, { ...s, text: Number(text.value) }));
 		// a contact fills the target; the slot keeps a copy, not a link. A text slot can't take an all call contact
 		const pick = h("select", { "aria-label": t("editor.onekey.contact_n", { n }), disabled: !s || !S.model.contacts.length },
@@ -613,7 +613,7 @@ function oneKeyPart() {
 				c.type === "all" ? c.name : `${c.name} · ${c.id}`)));
 		pick.addEventListener("change", () => {
 			const c = S.model.contacts[Number(pick.value)];
-			if (c) set(n, { ...s, type: c.type, id: c.id, name: c.name.slice(0, ONE_KEY_NAME_LEN) });
+			if (c) set(n, { ...s, type: c.type, id: c.id, name: c.name });	// a contact's name fits the same 16 bytes
 		});
 		const clear = button(t("editor.onekey.clear"), () => set(n, null), { quiet: true, disabled: !s });
 		// an empty slot shows only its action; a call has no quick text
